@@ -1,0 +1,9 @@
+.gradle/
+build/
+app/build/
+local.properties
+.idea/
+*.iml
+captures/
+# Copied from ../src at build time (see syncWebAssets in app/build.gradle.kts)
+app/src/main/assets/web/
