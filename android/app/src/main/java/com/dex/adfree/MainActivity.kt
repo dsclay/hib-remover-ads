@@ -15,6 +15,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
+import android.webkit.WebStorage
 import android.webkit.WebView
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -25,13 +26,15 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.webkit.ProfileStore
+import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
 import java.util.concurrent.atomic.AtomicInteger
 
 class MainActivity : ComponentActivity() {
 
-    private val state = BrowserState()
+    private lateinit var state: BrowserState
+    private lateinit var assetLoader: WebViewAssetLoader
     private val mainHandler = Handler(Looper.getMainLooper())
     private val blockedTotal = AtomicInteger()
     private lateinit var blocker: AdBlocker
@@ -43,6 +46,11 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        state = BrowserState(Settings(this))
+        // Serves the built-in home page from assets over https, never file://.
+        assetLoader = WebViewAssetLoader.Builder()
+            .addPathHandler("/assets/", WebViewAssetLoader.AssetsPathHandler(this))
+            .build()
         enableEdgeToEdge(
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
@@ -58,6 +66,7 @@ class MainActivity : ComponentActivity() {
             override fun handleOnBackPressed() {
                 when {
                     state.customView != null -> exitFullscreen()
+                    state.showSettings -> state.showSettings = false
                     state.showTabs -> state.showTabs = false
                     state.current?.webView?.canGoBack() == true -> state.current?.webView?.goBack()
                     else -> finish()
@@ -82,6 +91,7 @@ class MainActivity : ComponentActivity() {
                     onCloseTab = { closeTab(it) },
                     onNewTab = { addTab(it) },
                     onDownloads = { openDownloads() },
+                    onClearData = { clearData() },
                     onConfirmDownload = { startDownload(it) },
                 )
             }
@@ -102,7 +112,7 @@ class MainActivity : ComponentActivity() {
     // ---- Tabs ----
 
     private fun load(input: String) {
-        state.current?.webView?.loadUrl(Urls.normalize(input))
+        state.current?.webView?.loadUrl(prepare(input))
     }
 
     private fun addTab(isPrivate: Boolean, input: String = Urls.HOME): Tab? {
@@ -114,7 +124,7 @@ class MainActivity : ComponentActivity() {
         state.tabs.add(tab)
         select(tab)
         state.showTabs = false
-        tab.webView.loadUrl(Urls.normalize(input))
+        tab.webView.loadUrl(prepare(input))
         return tab
     }
 
@@ -222,6 +232,9 @@ class MainActivity : ComponentActivity() {
 
         wv.webViewClient = AdFreeWebViewClient(
             blocker = blocker,
+            assetLoader = assetLoader,
+            blockingEnabled = { state.settings.blockAds },
+            httpsOnly = { state.settings.httpsOnly },
             onBlocked = {
                 val n = blockedTotal.incrementAndGet()
                 mainHandler.post { state.blocked = n }
@@ -271,6 +284,19 @@ class MainActivity : ComponentActivity() {
             view.evaluateJavascript(scripts.ytMain, null)
             view.evaluateJavascript(scripts.ytHush, null)
         }
+    }
+
+    /** Address-bar input to a loadable URL, applying HTTPS-only mode when it is on. */
+    private fun prepare(input: String): String {
+        val url = Urls.normalize(input)
+        return if (state.settings.httpsOnly) Urls.upgrade(url) else url
+    }
+
+    private fun clearData() {
+        CookieManager.getInstance().removeAllCookies(null)
+        WebStorage.getInstance().deleteAllData()
+        state.tabs.filter { !it.isPrivate }.forEach { it.webView.clearCache(true) }
+        Toast.makeText(this, "Browsing data cleared", Toast.LENGTH_SHORT).show()
     }
 
     // ---- Downloads ----

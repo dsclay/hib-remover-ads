@@ -4,7 +4,12 @@ import android.content.Intent
 import android.net.Uri
 
 object Urls {
-    const val HOME = "https://m.youtube.com"
+    const val HOME = "https://appassets.androidplatform.net/assets/home/home.html"
+
+    fun isHome(url: String) = url.startsWith("https://appassets.androidplatform.net/")
+
+    /** http:// to https:// (used by HTTPS-only mode). */
+    fun upgrade(url: String) = if (url.startsWith("http://", ignoreCase = true)) "https://" + url.substring(7) else url
 
     private val HAS_SCHEME = Regex("^[a-zA-Z][a-zA-Z0-9+.-]*://")
     private val URL_IN_TEXT = Regex("https?://\\S+")

@@ -83,7 +83,8 @@ fun AdFreeTheme(content: @Composable () -> Unit) {
 }
 
 /** Shown while the field is not being edited: just the site name. */
-fun display(url: String): String = Uri.parse(url).host?.removePrefix("www.") ?: url
+fun display(url: String): String =
+    if (Urls.isHome(url)) "Home" else Uri.parse(url).host?.removePrefix("www.") ?: url
 
 @Composable
 fun BrowserScreen(
@@ -96,6 +97,7 @@ fun BrowserScreen(
     onCloseTab: (Tab) -> Unit,
     onNewTab: (Boolean) -> Unit,
     onDownloads: () -> Unit,
+    onClearData: () -> Unit,
     onConfirmDownload: (PendingDownload) -> Unit,
 ) {
     val context = LocalContext.current
@@ -156,7 +158,7 @@ fun BrowserScreen(
                                 .onFocusChanged {
                                     editing = it.isFocused
                                     if (it.isFocused) {
-                                        val full = tab?.url.orEmpty()
+                                        val full = tab?.url.orEmpty().takeUnless { Urls.isHome(it) }.orEmpty()
                                         field = TextFieldValue(full, TextRange(0, full.length))
                                     }
                                 },
@@ -271,6 +273,10 @@ fun BrowserScreen(
                                     text = { Text("Downloads") },
                                     onClick = { menuOpen = false; onDownloads() },
                                 )
+                                DropdownMenuItem(
+                                    text = { Text("Settings") },
+                                    onClick = { menuOpen = false; state.showSettings = true },
+                                )
                             }
                         }
                     }
@@ -284,6 +290,14 @@ fun BrowserScreen(
                     onClose = onCloseTab,
                     onNew = onNewTab,
                     onDismiss = { state.showTabs = false },
+                )
+            }
+
+            if (state.showSettings) {
+                SettingsScreen(
+                    settings = state.settings,
+                    onClearData = onClearData,
+                    onDismiss = { state.showSettings = false },
                 )
             }
 

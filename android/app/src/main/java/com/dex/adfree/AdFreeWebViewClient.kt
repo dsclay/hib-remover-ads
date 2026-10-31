@@ -3,25 +3,35 @@ package com.dex.adfree
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.graphics.Bitmap
+import android.net.Uri
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.webkit.WebViewAssetLoader
 import java.io.ByteArrayInputStream
 
 class AdFreeWebViewClient(
     private val blocker: AdBlocker,
+    private val assetLoader: WebViewAssetLoader,
+    private val blockingEnabled: () -> Boolean,
+    private val httpsOnly: () -> Boolean,
     private val onBlocked: () -> Unit,
     private val onStarted: (WebView, String) -> Unit,
     private val onNavigated: (WebView, String) -> Unit,
     private val onRenderGone: () -> Unit,
 ) : WebViewClient() {
 
+    /** Host of the page this tab is showing; read from the WebView worker threads, so volatile. */
+    @Volatile private var pageHost: String? = null
+
     // Runs on a WebView worker thread for every request.
     override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
-        if (request == null || request.isForMainFrame) return null
-        if (!blocker.shouldBlock(request.url)) return null
+        if (request == null) return null
+        assetLoader.shouldInterceptRequest(request.url)?.let { return it } // built-in home page
+        if (request.isForMainFrame || !blockingEnabled()) return null
+        if (!blocker.shouldBlock(request.url, pageHost)) return null
         onBlocked()
         return WebResourceResponse("text/plain", "utf-8", 403, "Blocked", emptyMap(), ByteArrayInputStream(ByteArray(0)))
     }
@@ -29,7 +39,15 @@ class AdFreeWebViewClient(
     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
         val uri = request?.url ?: return false
         return when (uri.scheme?.lowercase()) {
-            "http", "https", "about", "data", "blob" -> false
+            "http" -> {
+                if (httpsOnly() && request.isForMainFrame) {
+                    view?.loadUrl(uri.buildUpon().scheme("https").build().toString())
+                    true
+                } else {
+                    false
+                }
+            }
+            "https", "about", "data", "blob" -> false
             "mailto", "tel", "sms" -> {
                 try {
                     view?.context?.startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
@@ -45,7 +63,10 @@ class AdFreeWebViewClient(
 
     override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
         super.onPageStarted(view, url, favicon)
-        if (view != null && url != null) onStarted(view, url)
+        if (view != null && url != null) {
+            pageHost = Uri.parse(url).host
+            onStarted(view, url)
+        }
     }
 
     override fun onPageFinished(view: WebView?, url: String?) {
@@ -56,7 +77,10 @@ class AdFreeWebViewClient(
     // Also fires for in-page (history API) navigation, which is how YouTube moves between videos.
     override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
         super.doUpdateVisitedHistory(view, url, isReload)
-        if (view != null && url != null) onNavigated(view, url)
+        if (view != null && url != null) {
+            pageHost = Uri.parse(url).host
+            onNavigated(view, url)
+        }
     }
 
     override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
