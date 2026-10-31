@@ -1,8 +1,9 @@
 package com.dex.adfree
 
 import android.net.Uri
-import android.webkit.WebView
+import android.text.format.Formatter
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.union
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -25,18 +27,23 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -47,15 +54,19 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 
-private val Amber = Color(0xFFF3B23C)
+val Amber = Color(0xFFF3B23C)
+val PrivateBg = Color(0xFF2A2140)
+val PrivateFg = Color(0xFFB794F6)
 
 @Composable
 fun AdFreeTheme(content: @Composable () -> Unit) {
@@ -72,28 +83,33 @@ fun AdFreeTheme(content: @Composable () -> Unit) {
 }
 
 /** Shown while the field is not being edited: just the site name. */
-private fun display(url: String): String =
-    Uri.parse(url).host?.removePrefix("www.") ?: url
+fun display(url: String): String = Uri.parse(url).host?.removePrefix("www.") ?: url
 
 @Composable
 fun BrowserScreen(
     state: BrowserState,
-    webView: WebView,
     onGo: (String) -> Unit,
     onBack: () -> Unit,
     onForward: () -> Unit,
     onReload: () -> Unit,
-    onHome: () -> Unit,
+    onSelectTab: (Tab) -> Unit,
+    onCloseTab: (Tab) -> Unit,
+    onNewTab: (Boolean) -> Unit,
+    onDownloads: () -> Unit,
+    onConfirmDownload: (PendingDownload) -> Unit,
 ) {
+    val context = LocalContext.current
     val focus = LocalFocusManager.current
     val clipboard = LocalClipboardManager.current
     val colors = MaterialTheme.colorScheme
-    var field by remember { mutableStateOf(TextFieldValue(display(state.url))) }
+    val tab = state.current
+    var field by remember { mutableStateOf(TextFieldValue("")) }
     var editing by remember { mutableStateOf(false) }
+    var menuOpen by remember { mutableStateOf(false) }
 
-    // Follow the page unless the user is typing.
-    LaunchedEffect(state.url, editing) {
-        if (!editing) field = TextFieldValue(display(state.url))
+    // Follow the page (and the selected tab) unless the user is typing.
+    LaunchedEffect(tab?.id, tab?.url, editing) {
+        if (!editing) field = TextFieldValue(display(tab?.url.orEmpty()))
     }
 
     Surface(modifier = Modifier.fillMaxSize(), color = colors.background) {
@@ -106,7 +122,7 @@ fun BrowserScreen(
                 // Address pill
                 Surface(
                     shape = RoundedCornerShape(50),
-                    color = colors.surfaceVariant,
+                    color = if (tab?.isPrivate == true) PrivateBg else colors.surfaceVariant,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 8.dp)
@@ -116,6 +132,14 @@ fun BrowserScreen(
                         Modifier.padding(horizontal = 18.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
+                        if (tab?.isPrivate == true) {
+                            Text(
+                                "Private",
+                                color = PrivateFg,
+                                style = MaterialTheme.typography.labelMedium,
+                                modifier = Modifier.padding(end = 10.dp),
+                            )
+                        }
                         BasicTextField(
                             value = field,
                             onValueChange = { field = it },
@@ -131,7 +155,10 @@ fun BrowserScreen(
                                 .weight(1f)
                                 .onFocusChanged {
                                     editing = it.isFocused
-                                    if (it.isFocused) field = TextFieldValue(state.url, TextRange(0, state.url.length))
+                                    if (it.isFocused) {
+                                        val full = tab?.url.orEmpty()
+                                        field = TextFieldValue(full, TextRange(0, full.length))
+                                    }
                                 },
                         )
                         if (editing) {
@@ -154,23 +181,30 @@ fun BrowserScreen(
 
                 // Thin progress line (always reserves its height so the page doesn't jump)
                 Box(Modifier.fillMaxWidth().height(2.dp)) {
-                    if (state.progress in 1..99) {
+                    val p = tab?.progress ?: 0
+                    if (p in 1..99) {
                         LinearProgressIndicator(
-                            progress = { state.progress / 100f },
+                            progress = { p / 100f },
                             modifier = Modifier.fillMaxSize(),
-                            color = Amber,
+                            color = if (tab?.isPrivate == true) PrivateFg else Amber,
                             trackColor = Color.Transparent,
                         )
                     }
                 }
 
-                AndroidView(
-                    factory = { webView },
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)),
-                )
+                if (tab != null) {
+                    key(tab.id) {
+                        AndroidView(
+                            factory = { tab.webView },
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)),
+                        )
+                    }
+                } else {
+                    Spacer(Modifier.weight(1f))
+                }
 
                 // Floating bottom bar
                 Surface(
@@ -184,31 +218,73 @@ fun BrowserScreen(
                         Modifier.padding(horizontal = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        IconButton(onClick = onBack, enabled = state.canGoBack) {
+                        IconButton(onClick = onBack, enabled = tab?.canGoBack == true) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                         }
-                        IconButton(onClick = onForward, enabled = state.canGoForward) {
+                        IconButton(onClick = onForward, enabled = tab?.canGoForward == true) {
                             Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Forward")
                         }
                         IconButton(onClick = onReload) {
                             Icon(Icons.Default.Refresh, contentDescription = "Reload")
                         }
-                        IconButton(onClick = onHome) {
-                            Icon(Icons.Default.Home, contentDescription = "Home")
-                        }
                         Spacer(Modifier.weight(1f))
                         Text(
-                            "${state.blocked} blocked",
+                            "${state.blocked}",
                             style = MaterialTheme.typography.labelMedium,
                             color = Amber,
                             modifier = Modifier
-                                .padding(end = 10.dp)
                                 .clip(CircleShape)
                                 .background(Amber.copy(alpha = 0.14f))
                                 .padding(horizontal = 12.dp, vertical = 6.dp),
                         )
+                        // Tab count button
+                        Box(
+                            Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .clickable { state.showTabs = true },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Box(
+                                Modifier
+                                    .size(24.dp)
+                                    .border(2.dp, colors.onSurface, RoundedCornerShape(7.dp)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text("${state.tabs.size}", style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                        Box {
+                            IconButton(onClick = { menuOpen = true }) {
+                                Icon(Icons.Default.MoreVert, contentDescription = "Menu")
+                            }
+                            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("New tab") },
+                                    onClick = { menuOpen = false; onNewTab(false) },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("New private tab") },
+                                    onClick = { menuOpen = false; onNewTab(true) },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Downloads") },
+                                    onClick = { menuOpen = false; onDownloads() },
+                                )
+                            }
+                        }
                     }
                 }
+            }
+
+            if (state.showTabs) {
+                TabSwitcher(
+                    state = state,
+                    onSelect = onSelectTab,
+                    onClose = onCloseTab,
+                    onNew = onNewTab,
+                    onDismiss = { state.showTabs = false },
+                )
             }
 
             // Fullscreen page video sits above everything; the WebView stays composed underneath.
@@ -218,6 +294,37 @@ fun BrowserScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(Color.Black),
+                )
+            }
+
+            state.pendingDownload?.let { d ->
+                AlertDialog(
+                    onDismissRequest = { state.pendingDownload = null },
+                    title = { Text("Download file?") },
+                    text = {
+                        Column {
+                            Text(d.fileName, fontWeight = FontWeight.SemiBold)
+                            val size = if (d.length > 0) Formatter.formatShortFileSize(context, d.length) + " · " else ""
+                            Text(size + display(d.url), style = MaterialTheme.typography.bodySmall)
+                            if (d.risky) {
+                                Text(
+                                    "This file type can harm your device. Only continue if you trust this site.",
+                                    color = colors.error,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    modifier = Modifier.padding(top = 10.dp),
+                                )
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            state.pendingDownload = null
+                            onConfirmDownload(d)
+                        }) { Text(if (d.risky) "Download anyway" else "Download") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { state.pendingDownload = null }) { Text("Cancel") }
+                    },
                 )
             }
         }
