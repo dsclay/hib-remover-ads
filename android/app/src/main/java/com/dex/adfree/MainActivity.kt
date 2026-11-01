@@ -49,6 +49,7 @@ class MainActivity : ComponentActivity() {
     private var documentStartScripts = false
     private var privateSupported = false
     private var nextTabId = 0
+    private lateinit var downloader: Downloader
     private var mobileUa = ""
     private var desktopUa = ""
 
@@ -69,12 +70,14 @@ class MainActivity : ComponentActivity() {
         documentStartScripts = WebViewFeature.isFeatureSupported(WebViewFeature.DOCUMENT_START_SCRIPT)
         privateSupported = WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)
         deleteLeftoverPrivateProfiles()
+        downloader = Downloader(this, state.settings)
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 when {
                     state.customView != null -> exitFullscreen()
                     state.showSettings -> state.showSettings = false
+                    state.showDownloads -> state.showDownloads = false
                     state.showTabs -> state.showTabs = false
                     state.current?.webView?.canGoBack() == true -> state.current?.webView?.goBack()
                     else -> finish()
@@ -98,7 +101,8 @@ class MainActivity : ComponentActivity() {
                     },
                     onCloseTab = { closeTab(it) },
                     onNewTab = { addTab(it) },
-                    onDownloads = { openDownloads() },
+                    onDownloads = { state.showDownloads = true },
+                    downloader = downloader,
                     onClearData = { clearData() },
                     onFindVideos = { findVideos() },
                     onPickMedia = { pickMedia(it) },
@@ -380,27 +384,17 @@ class MainActivity : ComponentActivity() {
     // ---- Downloads ----
 
     private fun startDownload(d: PendingDownload) {
-        try {
-            val request = DownloadManager.Request(Uri.parse(d.url))
-                .setTitle(d.fileName)
-                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
-                .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, d.fileName)
-                .addRequestHeader("User-Agent", d.userAgent)
-            d.mimeType?.let { request.setMimeType(it) }
-            cookieManagerFor(d.tab).getCookie(d.url)?.let { request.addRequestHeader("Cookie", it) }
-            d.referer?.let { request.addRequestHeader("Referer", it) }
-            (getSystemService(DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
-            Toast.makeText(this, "Downloading ${d.fileName}", Toast.LENGTH_SHORT).show()
-        } catch (e: Exception) {
-            // blob:/data: links and missing storage permission (Android 8-9) end up here.
+        val scheme = Uri.parse(d.url).scheme?.lowercase()
+        if (scheme != "http" && scheme != "https") {
             Toast.makeText(this, "Can't download this file", Toast.LENGTH_LONG).show()
+            return
         }
-    }
-
-    private fun openDownloads() {
-        runCatching {
-            startActivity(Intent(DownloadManager.ACTION_VIEW_DOWNLOADS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        }
+        val headers = HashMap<String, String>()
+        headers["User-Agent"] = d.userAgent
+        cookieManagerFor(d.tab).getCookie(d.url)?.let { headers["Cookie"] = it }
+        d.referer?.let { headers["Referer"] = it }
+        downloader.start(d.url, d.fileName, headers, persist = !d.tab.isPrivate)
+        Toast.makeText(this, "Downloading ${d.fileName}", Toast.LENGTH_SHORT).show()
     }
 
     // ---- Fullscreen video ----

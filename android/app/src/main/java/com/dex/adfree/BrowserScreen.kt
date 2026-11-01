@@ -35,6 +35,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -101,6 +103,7 @@ fun BrowserScreen(
     onCloseTab: (Tab) -> Unit,
     onNewTab: (Boolean) -> Unit,
     onDownloads: () -> Unit,
+    downloader: Downloader,
     onClearData: () -> Unit,
     onFindVideos: () -> Unit,
     onPickMedia: (MediaChoice) -> Unit,
@@ -327,6 +330,10 @@ fun BrowserScreen(
                 )
             }
 
+            if (state.showDownloads) {
+                DownloadsScreen(downloader, state.settings, onDismiss = { state.showDownloads = false })
+            }
+
             if (state.showSettings) {
                 SettingsScreen(
                     settings = state.settings,
@@ -359,20 +366,32 @@ fun BrowserScreen(
                         } else {
                             Column(Modifier.verticalScroll(rememberScrollState())) {
                                 choices.forEach { c ->
-                                    Column(
-                                        Modifier
+                                    Surface(
+                                        shape = RoundedCornerShape(16.dp),
+                                        color = colors.surfaceVariant,
+                                        modifier = Modifier
                                             .fillMaxWidth()
-                                            .clickable { onPickMedia(c) }
-                                            .padding(vertical = 10.dp),
+                                            .padding(vertical = 5.dp),
                                     ) {
-                                        Text(c.label, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        Text(
-                                            display(c.url),
-                                            style = MaterialTheme.typography.labelMedium,
-                                            color = colors.onSurface.copy(alpha = 0.6f),
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                        )
+                                        Row(
+                                            Modifier.padding(start = 14.dp, top = 10.dp, bottom = 10.dp, end = 10.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Column(Modifier.weight(1f).padding(end = 8.dp)) {
+                                                Text(c.label, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                                Text(
+                                                    display(c.url),
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    color = colors.onSurface.copy(alpha = 0.6f),
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis,
+                                                )
+                                            }
+                                            Button(
+                                                onClick = { onPickMedia(c) },
+                                                colors = ButtonDefaults.buttonColors(containerColor = Amber, contentColor = Color.Black),
+                                            ) { Text("Download", fontWeight = FontWeight.Bold) }
+                                        }
                                     }
                                 }
                             }
@@ -402,10 +421,13 @@ fun BrowserScreen(
                         }
                     },
                     confirmButton = {
-                        TextButton(onClick = {
-                            state.pendingDownload = null
-                            onConfirmDownload(d)
-                        }) { Text(if (d.risky) "Download anyway" else "Download") }
+                        Button(
+                            onClick = {
+                                state.pendingDownload = null
+                                onConfirmDownload(d)
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = Amber, contentColor = Color.Black),
+                        ) { Text(if (d.risky) "Download anyway" else "Download", fontWeight = FontWeight.Bold) }
                     },
                     dismissButton = {
                         TextButton(onClick = { state.pendingDownload = null }) { Text("Cancel") }

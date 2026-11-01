@@ -53,6 +53,13 @@ fun SettingsScreen(
             )
 
             SwitchRow(
+                title = "Boost downloads",
+                subtitle = "Fetch big files with up to 6 parallel connections",
+                checked = settings.boostDownloads,
+                onChange = settings::updateBoostDownloads,
+            )
+
+            SwitchRow(
                 title = "Faster page loading",
                 subtitle = "Lazy-load images and frames. Applies to new tabs.",
                 checked = settings.fasterLoading,
@@ -86,7 +93,7 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SwitchRow(title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+fun SwitchRow(title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Surface(
         shape = RoundedCornerShape(18.dp),
         color = MaterialTheme.colorScheme.surfaceVariant,
