@@ -22,6 +22,7 @@ class AdFreeWebViewClient(
     private val blockingEnabled: (String?) -> Boolean,
     private val httpsOnly: () -> Boolean,
     private val onBlocked: () -> Unit,
+    private val onMedia: (String) -> Unit,
     private val onStarted: (WebView, String) -> Unit,
     private val onNavigated: (WebView, String) -> Unit,
     private val onRenderGone: () -> Unit,
@@ -34,10 +35,13 @@ class AdFreeWebViewClient(
     override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
         if (request == null) return null
         assetLoader.shouldInterceptRequest(request.url)?.let { return it } // built-in home page
-        if (request.isForMainFrame || !blockingEnabled(pageHost)) return null
-        if (!blocker.shouldBlock(request.url, pageHost)) return null
-        onBlocked()
-        return WebResourceResponse("text/plain", "utf-8", 403, "Blocked", emptyMap(), ByteArrayInputStream(ByteArray(0)))
+        if (request.isForMainFrame) return null
+        if (blockingEnabled(pageHost) && blocker.shouldBlock(request.url, pageHost)) {
+            onBlocked()
+            return WebResourceResponse("text/plain", "utf-8", 403, "Blocked", emptyMap(), ByteArrayInputStream(ByteArray(0)))
+        }
+        if (Media.isMedia(request)) onMedia(request.url.toString())
+        return null
     }
 
     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {

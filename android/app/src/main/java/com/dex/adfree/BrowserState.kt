@@ -20,5 +20,8 @@ class BrowserState(val settings: Settings) {
 
     var pendingDownload by mutableStateOf<PendingDownload?>(null)
 
+    /** Videos found on the current page; null while the picker is closed. */
+    var mediaChoices by mutableStateOf<List<MediaChoice>?>(null)
+
     val current: Tab? get() = tabs.firstOrNull { it.id == currentId }
 }

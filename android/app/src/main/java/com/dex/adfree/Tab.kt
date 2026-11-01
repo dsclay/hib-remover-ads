@@ -19,6 +19,10 @@ class Tab(
     var progress by mutableIntStateOf(0)
     var canGoBack by mutableStateOf(false)
     var canGoForward by mutableStateOf(false)
+    var desktop by mutableStateOf(false)
+
+    /** Media URLs seen loading in this tab (filled from WebView worker threads). */
+    val media = java.util.concurrent.CopyOnWriteArrayList<String>()
 }
 
 /** A download waiting for the user's confirmation. */
@@ -29,8 +33,10 @@ class PendingDownload(
     val mimeType: String?,
     val length: Long,
     val tab: Tab,
+    val suggestedName: String? = null,
+    val referer: String? = null,
 ) {
-    val fileName: String = URLUtil.guessFileName(url, contentDisposition, mimeType)
+    val fileName: String = suggestedName ?: URLUtil.guessFileName(url, contentDisposition, mimeType)
     val risky: Boolean = fileName.substringAfterLast('.', "").lowercase() in RISKY_EXTENSIONS
 
     private companion object {

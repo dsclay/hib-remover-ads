@@ -31,6 +31,8 @@ import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import org.json.JSONArray
+import org.json.JSONTokener
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -47,6 +49,8 @@ class MainActivity : ComponentActivity() {
     private var documentStartScripts = false
     private var privateSupported = false
     private var nextTabId = 0
+    private var mobileUa = ""
+    private var desktopUa = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -96,6 +100,9 @@ class MainActivity : ComponentActivity() {
                     onNewTab = { addTab(it) },
                     onDownloads = { openDownloads() },
                     onClearData = { clearData() },
+                    onFindVideos = { findVideos() },
+                    onPickMedia = { pickMedia(it) },
+                    onToggleDesktop = { toggleDesktop() },
                     onConfirmDownload = { startDownload(it) },
                 )
             }
@@ -224,6 +231,8 @@ class MainActivity : ComponentActivity() {
                 .replace("; wv", "")
                 .replace(Regex("Version/\\d+\\.\\d+ "), "")
         }
+        mobileUa = wv.settings.userAgentString
+        desktopUa = mobileUa.replace(Regex("\\(Linux; Android [^)]*\\)"), "(X11; Linux x86_64)").replace(" Mobile Safari", " Safari")
         cookieManagerFor(tab).setAcceptThirdPartyCookies(wv, true)
         if (WebViewFeature.isFeatureSupported(WebViewFeature.SAFE_BROWSING_ENABLE)) {
             WebSettingsCompat.setSafeBrowsingEnabled(wv.settings, true)
@@ -261,7 +270,9 @@ class MainActivity : ComponentActivity() {
                     }, 300)
                 }
             },
+            onMedia = { url -> if (tab.media.size < 40 && url !in tab.media) tab.media.add(url) },
             onStarted = { view, url ->
+                tab.media.clear()
                 if (!documentStartScripts) injectFallback(view, url)
                 sync(tab, url)
             },
@@ -322,6 +333,50 @@ class MainActivity : ComponentActivity() {
         Toast.makeText(this, "Browsing data cleared", Toast.LENGTH_SHORT).show()
     }
 
+    // ---- Video capture and desktop mode ----
+
+    /** Lists videos the page has loaded (seen on the network) plus any in the page itself. */
+    private fun findVideos() {
+        val tab = state.current ?: return
+        tab.webView.evaluateJavascript(FIND_MEDIA_JS) { raw ->
+            val urls = LinkedHashSet<String>(tab.media)
+            runCatching {
+                val inner = JSONTokener(raw).nextValue() as? String
+                if (inner != null) {
+                    val arr = JSONArray(inner)
+                    for (i in 0 until arr.length()) urls.add(arr.getString(i))
+                }
+            }
+            state.mediaChoices = urls.take(20).map { MediaChoice(it, Media.fileName(tab.title, it)) }
+        }
+    }
+
+    private fun pickMedia(choice: MediaChoice) {
+        val tab = state.current ?: return
+        state.mediaChoices = null
+        state.pendingDownload = PendingDownload(
+            url = choice.url,
+            userAgent = tab.webView.settings.userAgentString,
+            contentDisposition = null,
+            mimeType = null,
+            length = -1,
+            tab = tab,
+            suggestedName = choice.label,
+            referer = tab.url,
+        )
+    }
+
+    private fun toggleDesktop() {
+        val tab = state.current ?: return
+        tab.desktop = !tab.desktop
+        tab.webView.settings.apply {
+            userAgentString = if (tab.desktop) desktopUa else mobileUa
+            useWideViewPort = tab.desktop
+            loadWithOverviewMode = tab.desktop
+        }
+        tab.webView.reload()
+    }
+
     // ---- Downloads ----
 
     private fun startDownload(d: PendingDownload) {
@@ -333,6 +388,7 @@ class MainActivity : ComponentActivity() {
                 .addRequestHeader("User-Agent", d.userAgent)
             d.mimeType?.let { request.setMimeType(it) }
             cookieManagerFor(d.tab).getCookie(d.url)?.let { request.addRequestHeader("Cookie", it) }
+            d.referer?.let { request.addRequestHeader("Referer", it) }
             (getSystemService(DOWNLOAD_SERVICE) as DownloadManager).enqueue(request)
             Toast.makeText(this, "Downloading ${d.fileName}", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
@@ -370,6 +426,9 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val PRIVATE_PREFIX = "private_"
+        const val FIND_MEDIA_JS =
+            "(function(){var o=[];document.querySelectorAll('video,video source,audio,audio source').forEach(function(e){" +
+                "var s=e.currentSrc||e.src;if(s&&/^https?:/.test(s))o.push(s)});return JSON.stringify(o)})()"
         const val PAUSE_MEDIA =
             "document.querySelectorAll('video,audio').forEach(function(m){try{m.pause()}catch(e){}})"
         val YOUTUBE_ORIGINS = setOf(

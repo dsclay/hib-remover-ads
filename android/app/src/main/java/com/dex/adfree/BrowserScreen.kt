@@ -4,6 +4,8 @@ import android.net.Uri
 import android.text.format.Formatter
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,6 +63,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 
@@ -99,6 +102,9 @@ fun BrowserScreen(
     onNewTab: (Boolean) -> Unit,
     onDownloads: () -> Unit,
     onClearData: () -> Unit,
+    onFindVideos: () -> Unit,
+    onPickMedia: (MediaChoice) -> Unit,
+    onToggleDesktop: () -> Unit,
     onConfirmDownload: (PendingDownload) -> Unit,
 ) {
     val context = LocalContext.current
@@ -294,6 +300,14 @@ fun BrowserScreen(
                                     )
                                 }
                                 DropdownMenuItem(
+                                    text = { Text("Download video") },
+                                    onClick = { menuOpen = false; onFindVideos() },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(if (tab?.desktop == true) "Mobile site" else "Desktop site") },
+                                    onClick = { menuOpen = false; onToggleDesktop() },
+                                )
+                                DropdownMenuItem(
                                     text = { Text("Settings") },
                                     onClick = { menuOpen = false; state.showSettings = true },
                                 )
@@ -328,6 +342,43 @@ fun BrowserScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(Color.Black),
+                )
+            }
+
+            state.mediaChoices?.let { choices ->
+                AlertDialog(
+                    onDismissRequest = { state.mediaChoices = null },
+                    title = { Text("Videos on this page") },
+                    text = {
+                        if (choices.isEmpty()) {
+                            Text(
+                                "No downloadable video found. Start playing the video, then try again. " +
+                                    "Streaming sites (YouTube, HLS/DASH playlists, DRM) can't be saved.",
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        } else {
+                            Column(Modifier.verticalScroll(rememberScrollState())) {
+                                choices.forEach { c ->
+                                    Column(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .clickable { onPickMedia(c) }
+                                            .padding(vertical = 10.dp),
+                                    ) {
+                                        Text(c.label, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(
+                                            display(c.url),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = colors.onSurface.copy(alpha = 0.6f),
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = { TextButton(onClick = { state.mediaChoices = null }) { Text("Close") } },
                 )
             }
 
