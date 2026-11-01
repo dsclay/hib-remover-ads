@@ -236,7 +236,7 @@ class MainActivity : ComponentActivity() {
                 .replace(Regex("Version/\\d+\\.\\d+ "), "")
         }
         mobileUa = wv.settings.userAgentString
-        desktopUa = mobileUa.replace(Regex("\\(Linux; Android [^)]*\\)"), "(X11; Linux x86_64)").replace(" Mobile Safari", " Safari")
+        desktopUa = mobileUa.replace(Regex("\\(Linux; Android [^)]*\\)"), "(X11; Linux x86_64)").replace(" Mobile Safari", " Safari").replace(" Version/4.0", "")
         cookieManagerFor(tab).setAcceptThirdPartyCookies(wv, true)
         if (WebViewFeature.isFeatureSupported(WebViewFeature.SAFE_BROWSING_ENABLE)) {
             WebSettingsCompat.setSafeBrowsingEnabled(wv.settings, true)
@@ -249,6 +249,7 @@ class MainActivity : ComponentActivity() {
         // all before the page's own scripts run.
         if (documentStartScripts) {
             WebViewCompat.addDocumentStartJavaScript(wv, scripts.cosmetic, setOf("*"))
+            WebViewCompat.addDocumentStartJavaScript(wv, scripts.desktop, setOf("*"))
             WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytMain, YOUTUBE_ORIGINS)
             WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytHush, YOUTUBE_ORIGINS)
             WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytFeed, YOUTUBE_ORIGINS)
@@ -274,9 +275,15 @@ class MainActivity : ComponentActivity() {
                     }, 300)
                 }
             },
-            onMedia = { url -> if (tab.media.size < 40 && url !in tab.media) tab.media.add(url) },
+            onMedia = { url, hdrs ->
+                if (tab.media.size < 40 && url !in tab.media) {
+                    tab.media.add(url)
+                    tab.mediaHeaders[url] = hdrs
+                }
+            },
             onStarted = { view, url ->
                 tab.media.clear()
+                tab.mediaHeaders.clear()
                 if (!documentStartScripts) injectFallback(view, url)
                 sync(tab, url)
             },
@@ -367,6 +374,7 @@ class MainActivity : ComponentActivity() {
             tab = tab,
             suggestedName = choice.label,
             referer = tab.url,
+            headers = tab.mediaHeaders[choice.url] ?: emptyMap(),
         )
     }
 
@@ -378,6 +386,7 @@ class MainActivity : ComponentActivity() {
             useWideViewPort = tab.desktop
             loadWithOverviewMode = tab.desktop
         }
+        tab.webView.clearCache(false)
         tab.webView.reload()
     }
 
@@ -393,6 +402,8 @@ class MainActivity : ComponentActivity() {
         headers["User-Agent"] = d.userAgent
         cookieManagerFor(d.tab).getCookie(d.url)?.let { headers["Cookie"] = it }
         d.referer?.let { headers["Referer"] = it }
+        // Replay what the page itself sent for this file (the real Referer/Origin often differ from the page URL).
+        for ((k, v) in d.headers) if (k.lowercase() in REPLAY_HEADERS) headers[k.lowercase().replaceFirstChar { c -> c.uppercase() }] = v
         downloader.start(d.url, d.fileName, headers, persist = !d.tab.isPrivate)
         Toast.makeText(this, "Downloading ${d.fileName}", Toast.LENGTH_SHORT).show()
     }
@@ -420,6 +431,7 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val PRIVATE_PREFIX = "private_"
+        val REPLAY_HEADERS = setOf("referer", "origin", "user-agent", "accept-language")
         const val FIND_MEDIA_JS =
             "(function(){var o=[];document.querySelectorAll('video,video source,audio,audio source').forEach(function(e){" +
                 "var s=e.currentSrc||e.src;if(s&&/^https?:/.test(s))o.push(s)});return JSON.stringify(o)})()"

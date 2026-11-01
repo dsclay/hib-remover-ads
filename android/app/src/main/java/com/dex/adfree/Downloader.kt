@@ -141,8 +141,13 @@ class Downloader(context: Context, private val settings: Settings) {
         }
         main.post(ticker)
         try {
-            val probe = connect(item.url, headers, "bytes=0-0")
-            val code = probe.responseCode
+            var probe = connect(item.url, headers, "bytes=0-0")
+            var code = probe.responseCode
+            if (code != 200 && code != 206) { // some servers refuse Range requests: try a plain GET
+                probe.disconnect()
+                probe = connect(item.url, headers, null)
+                code = probe.responseCode
+            }
             val finalUrl = probe.url.toString()
             var total = -1L
             var ranged = false

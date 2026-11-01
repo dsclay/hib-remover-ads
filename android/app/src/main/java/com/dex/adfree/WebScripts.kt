@@ -19,6 +19,9 @@ class WebScripts(context: Context) {
     /** Lazy-loads off-screen images and frames. */
     val perf: String = read(context, "scripts/perf.js")
 
+    /** Makes pages treat the browser as a desktop one while Desktop site is on. */
+    val desktop: String = read(context, "scripts/desktop.js")
+
     /**
      * Wraps generic.css so it is applied as a <style> element as early as the document allows,
      * except on the sites the extension also exempts (rules/no_generic.txt), e.g. reddit.com and youtube.com.

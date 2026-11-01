@@ -23,6 +23,9 @@ class Tab(
 
     /** Media URLs seen loading in this tab (filled from WebView worker threads). */
     val media = java.util.concurrent.CopyOnWriteArrayList<String>()
+
+    /** The headers the page itself used to request each media URL (Referer, Origin ...), replayed when downloading. */
+    val mediaHeaders = java.util.concurrent.ConcurrentHashMap<String, Map<String, String>>()
 }
 
 /** A download waiting for the user's confirmation. */
@@ -35,6 +38,7 @@ class PendingDownload(
     val tab: Tab,
     val suggestedName: String? = null,
     val referer: String? = null,
+    val headers: Map<String, String> = emptyMap(),
 ) {
     val fileName: String = suggestedName ?: URLUtil.guessFileName(url, contentDisposition, mimeType)
     val risky: Boolean = fileName.substringAfterLast('.', "").lowercase() in RISKY_EXTENSIONS
