@@ -13,6 +13,8 @@
         android:theme="@style/Theme.AdFree"
         android:usesCleartextTraffic="true">
 
+        <meta-data android:name="android.webkit.WebView.EnableSafeBrowsing" android:value="true" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

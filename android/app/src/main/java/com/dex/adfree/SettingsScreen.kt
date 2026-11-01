@@ -52,6 +52,13 @@ fun SettingsScreen(
                 onChange = settings::updateHttpsOnly,
             )
 
+            SwitchRow(
+                title = "Faster page loading",
+                subtitle = "Lazy-load images and frames. Applies to new tabs.",
+                checked = settings.fasterLoading,
+                onChange = settings::updateFasterLoading,
+            )
+
             Surface(
                 shape = RoundedCornerShape(18.dp),
                 color = MaterialTheme.colorScheme.surfaceVariant,

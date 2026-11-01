@@ -1,9 +1,10 @@
 package com.dex.adfree
 
 import android.content.Context
+import org.json.JSONArray
 import org.json.JSONObject
 
-/** The extension's scripts, loaded from assets/web/ (copied from ../src at build time). */
+/** Scripts injected into pages. The web folder is copied from ../src at build time; the scripts folder is this app's own. */
 class WebScripts(context: Context) {
 
     /** Runs inside YouTube's page before its own scripts; strips ad data from player responses. */
@@ -12,14 +13,35 @@ class WebScripts(context: Context) {
     /** Fallback on YouTube: mutes, fast-forwards and skips any ad that still reaches the player. */
     val ytHush: String = read(context, "web/youtube.js")
 
-    /** Wraps generic.css so it is applied as a <style> element as early as the document allows. */
-    val cosmetic: String = cosmeticLoader(read(context, "web/generic.css"))
+    /** Removes sponsored items from YouTube feeds and Shorts. */
+    val ytFeed: String = read(context, "scripts/yt-feed.js")
+
+    /** Lazy-loads off-screen images and frames. */
+    val perf: String = read(context, "scripts/perf.js")
+
+    /**
+     * Wraps generic.css so it is applied as a <style> element as early as the document allows,
+     * except on the sites the extension also exempts (rules/no_generic.txt), e.g. reddit.com and youtube.com.
+     */
+    val cosmetic: String = cosmeticLoader(read(context, "web/generic.css"), readLines(context, "rules/no_generic.txt"))
 
     private fun read(context: Context, path: String): String =
         context.assets.open(path).bufferedReader().use { it.readText() }
 
-    private fun cosmeticLoader(css: String): String = """
+    private fun readLines(context: Context, path: String): List<String> = try {
+        context.assets.open(path).bufferedReader().useLines { lines -> lines.map { it.trim() }.filter { it.isNotEmpty() }.toList() }
+    } catch (_: Exception) {
+        emptyList()
+    }
+
+    private fun cosmeticLoader(css: String, skipHosts: List<String>): String = """
         (function () {
+          var skip = new Set(${JSONArray(skipHosts)});
+          for (var p = location.hostname.toLowerCase(); p; ) {
+            if (skip.has(p)) return;
+            var i = p.indexOf('.');
+            p = i < 0 ? '' : p.slice(i + 1);
+          }
           var css = ${JSONObject.quote(css)};
           function add() {
             var s = document.createElement('style');

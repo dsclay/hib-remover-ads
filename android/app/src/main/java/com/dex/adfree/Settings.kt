@@ -16,6 +16,15 @@ class Settings(context: Context) {
     var httpsOnly by mutableStateOf(prefs.getBoolean(KEY_HTTPS, false))
         private set
 
+    /** Lazy-load images and frames. Read when a tab is created, so it applies to new tabs. */
+    var fasterLoading by mutableStateOf(prefs.getBoolean(KEY_FAST, true))
+        private set
+
+    fun updateFasterLoading(value: Boolean) {
+        fasterLoading = value
+        prefs.edit().putBoolean(KEY_FAST, value).apply()
+    }
+
     fun updateBlockAds(value: Boolean) {
         blockAds = value
         prefs.edit().putBoolean(KEY_BLOCK, value).apply()
@@ -29,5 +38,6 @@ class Settings(context: Context) {
     private companion object {
         const val KEY_BLOCK = "blockAds"
         const val KEY_HTTPS = "httpsOnly"
+        const val KEY_FAST = "fasterLoading"
     }
 }

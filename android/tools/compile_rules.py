@@ -14,6 +14,7 @@ Line formats (tab separated):
       inits / excl = comma separated initiator domains (page must / must not be one of them)
       pattern = lowercase ABP-style filter: || | * ^ supported
 Redirect rules and main_frame-only rules are skipped.
+Also writes no_generic.txt: hosts where the generic cosmetic CSS must not be applied.
 """
 import collections
 import json
@@ -99,6 +100,11 @@ def main():
             if not token:
                 generic += 1
             f.write(f"{kind}\t{token}\t{flags}\t{inits}\t{excl}\t{pattern}\n")
+
+    cosmetic = json.load(open(ROOT / "src/rules/cosmetic.json"))
+    hosts = sorted({h.lower() for k in ("noGeneric", "partialGeneric", "noCosmetic") for h in cosmetic.get(k, [])})
+    (OUT.parent / "no_generic.txt").write_text("\n".join(hosts) + "\n", encoding="utf-8")
+    print(f"no_generic_hosts={len(hosts)}")
 
     print(f"domains={len(domains)} third_party_domains={len(third_domains)} pattern_rules={len(rules)} "
           f"without_token={generic} size={OUT.stat().st_size // 1024}KB")

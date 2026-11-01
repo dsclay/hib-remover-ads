@@ -15,6 +15,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.webkit.CookieManager
 import android.webkit.WebChromeClient
+import android.webkit.WebSettings
 import android.webkit.WebStorage
 import android.webkit.WebView
 import android.widget.Toast
@@ -26,6 +27,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.webkit.ProfileStore
+import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
@@ -196,6 +198,7 @@ class MainActivity : ComponentActivity() {
     private fun cookieManagerFor(tab: Tab): CookieManager =
         tab.profile?.let { ProfileStore.getInstance().getProfile(it)?.cookieManager } ?: CookieManager.getInstance()
 
+    @Suppress("DEPRECATION")
     @SuppressLint("SetJavaScriptEnabled")
     private fun configure(wv: WebView, tab: Tab) {
         wv.setBackgroundColor(Color.BLACK)
@@ -208,12 +211,21 @@ class MainActivity : ComponentActivity() {
             setSupportZoom(true)
             builtInZoomControls = true
             displayZoomControls = false
+            // Strict baseline: pages cannot read local files or content providers; no mixed content.
+            allowFileAccess = false
+            allowContentAccess = false
+            allowFileAccessFromFileURLs = false
+            allowUniversalAccessFromFileURLs = false
+            mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             // Present as plain mobile Chrome; the "; wv" marker makes some sites serve app-style pages.
             userAgentString = userAgentString
                 .replace("; wv", "")
                 .replace(Regex("Version/\\d+\\.\\d+ "), "")
         }
         cookieManagerFor(tab).setAcceptThirdPartyCookies(wv, true)
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.SAFE_BROWSING_ENABLE)) {
+            WebSettingsCompat.setSafeBrowsingEnabled(wv.settings, true)
+        }
         if ((applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
             WebView.setWebContentsDebuggingEnabled(true)
         }
@@ -224,6 +236,8 @@ class MainActivity : ComponentActivity() {
             WebViewCompat.addDocumentStartJavaScript(wv, scripts.cosmetic, setOf("*"))
             WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytMain, YOUTUBE_ORIGINS)
             WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytHush, YOUTUBE_ORIGINS)
+            WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytFeed, YOUTUBE_ORIGINS)
+            if (state.settings.fasterLoading) WebViewCompat.addDocumentStartJavaScript(wv, scripts.perf, setOf("*"))
         }
 
         wv.setDownloadListener { url, userAgent, contentDisposition, mimeType, contentLength ->
@@ -283,6 +297,7 @@ class MainActivity : ComponentActivity() {
         if (host == "youtube.com" || host.endsWith(".youtube.com") || host.endsWith(".youtube-nocookie.com")) {
             view.evaluateJavascript(scripts.ytMain, null)
             view.evaluateJavascript(scripts.ytHush, null)
+            view.evaluateJavascript(scripts.ytFeed, null)
         }
     }
 

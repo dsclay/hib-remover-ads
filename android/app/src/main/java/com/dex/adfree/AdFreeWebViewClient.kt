@@ -3,12 +3,16 @@ package com.dex.adfree
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.graphics.Bitmap
+import android.os.Build
 import android.net.Uri
 import android.webkit.RenderProcessGoneDetail
+import android.webkit.SafeBrowsingResponse
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.webkit.WebViewAssetLoader
 import java.io.ByteArrayInputStream
 
@@ -81,6 +85,13 @@ class AdFreeWebViewClient(
             pageHost = Uri.parse(url).host
             onNavigated(view, url)
         }
+    }
+
+    // Google Safe Browsing: never let the user continue to a flagged page.
+    @RequiresApi(Build.VERSION_CODES.O_MR1)
+    override fun onSafeBrowsingHit(view: WebView?, request: WebResourceRequest?, threatType: Int, callback: SafeBrowsingResponse?) {
+        callback?.backToSafety(true)
+        view?.context?.let { Toast.makeText(it, "Blocked a dangerous site", Toast.LENGTH_LONG).show() }
     }
 
     override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
