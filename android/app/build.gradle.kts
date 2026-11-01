@@ -18,7 +18,11 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // Smaller and faster than debug. Signed with the debug key so it installs directly.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 

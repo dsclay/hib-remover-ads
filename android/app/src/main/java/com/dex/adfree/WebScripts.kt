@@ -36,6 +36,7 @@ class WebScripts(context: Context) {
 
     private fun cosmeticLoader(css: String, skipHosts: List<String>): String = """
         (function () {
+          if (window !== window.top) return; // top frame only: cheaper, ads are blocked at the network level anyway
           var skip = new Set(${JSONArray(skipHosts)});
           for (var p = location.hostname.toLowerCase(); p; ) {
             if (skip.has(p)) return;

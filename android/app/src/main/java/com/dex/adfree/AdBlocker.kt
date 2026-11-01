@@ -85,7 +85,10 @@ class AdBlocker(context: Context) {
             for (s in substrings) if (full.contains(s)) return true
         }
 
-        // Layer 2: the big compiled rule set, once loaded.
+        // Layer 2: the big compiled rule set, once loaded. A site's own hosts (github.com and githubassets.com,
+        // reddit.com and redditstatic.com) are exempt so broad patterns cannot break the site's own scripts.
+        val brand = page?.let { siteOf(it).substringBefore('.') }
+        if (brand != null && brand.length >= 4 && host.contains(brand)) return false
         val ext = extended ?: return false
         val third = page == null || siteOf(page) != siteOf(host)
         return ext.blocks(url.toString().lowercase(Locale.ROOT).take(2000), host, page, third)

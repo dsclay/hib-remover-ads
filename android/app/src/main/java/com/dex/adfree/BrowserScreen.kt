@@ -84,7 +84,8 @@ fun AdFreeTheme(content: @Composable () -> Unit) {
 
 /** Shown while the field is not being edited: just the site name. */
 fun display(url: String): String =
-    if (Urls.isHome(url)) "Home" else Uri.parse(url).host?.removePrefix("www.") ?: url
+    if (Urls.isHome(url)) "Home"
+    else url.removePrefix("https://").removePrefix("http://").removePrefix("www.").removeSuffix("/")
 
 @Composable
 fun BrowserScreen(
@@ -105,6 +106,7 @@ fun BrowserScreen(
     val clipboard = LocalClipboardManager.current
     val colors = MaterialTheme.colorScheme
     val tab = state.current
+    val host = tab?.url?.takeUnless { Urls.isHome(it) }?.let { Uri.parse(it).host }
     var field by remember { mutableStateOf(TextFieldValue("")) }
     var editing by remember { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
@@ -138,6 +140,14 @@ fun BrowserScreen(
                             Text(
                                 "Private",
                                 color = PrivateFg,
+                                style = MaterialTheme.typography.labelMedium,
+                                modifier = Modifier.padding(end = 10.dp),
+                            )
+                        }
+                        if (tab?.url?.startsWith("http://") == true) {
+                            Text(
+                                "Not secure",
+                                color = colors.error,
                                 style = MaterialTheme.typography.labelMedium,
                                 modifier = Modifier.padding(end = 10.dp),
                             )
@@ -200,8 +210,7 @@ fun BrowserScreen(
                             factory = { tab.webView },
                             modifier = Modifier
                                 .weight(1f)
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)),
+                                .fillMaxWidth(),
                         )
                     }
                 } else {
@@ -273,6 +282,17 @@ fun BrowserScreen(
                                     text = { Text("Downloads") },
                                     onClick = { menuOpen = false; onDownloads() },
                                 )
+                                if (host != null) {
+                                    val paused = state.settings.isPaused(host)
+                                    DropdownMenuItem(
+                                        text = { Text(if (paused) "Resume blocking on this site" else "Pause blocking on this site") },
+                                        onClick = {
+                                            menuOpen = false
+                                            state.settings.setPaused(host, !paused)
+                                            onReload()
+                                        },
+                                    )
+                                }
                                 DropdownMenuItem(
                                     text = { Text("Settings") },
                                     onClick = { menuOpen = false; state.showSettings = true },

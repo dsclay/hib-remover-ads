@@ -31,6 +31,7 @@ import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewAssetLoader
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 class MainActivity : ComponentActivity() {
@@ -39,6 +40,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var assetLoader: WebViewAssetLoader
     private val mainHandler = Handler(Looper.getMainLooper())
     private val blockedTotal = AtomicInteger()
+    private val counterPending = AtomicBoolean(false)
     private lateinit var blocker: AdBlocker
     private lateinit var scripts: WebScripts
     private var customViewCallback: WebChromeClient.CustomViewCallback? = null
@@ -247,11 +249,17 @@ class MainActivity : ComponentActivity() {
         wv.webViewClient = AdFreeWebViewClient(
             blocker = blocker,
             assetLoader = assetLoader,
-            blockingEnabled = { state.settings.blockAds },
+            blockingEnabled = { host -> state.settings.blockAds && !state.settings.isPaused(host) },
             httpsOnly = { state.settings.httpsOnly },
             onBlocked = {
-                val n = blockedTotal.incrementAndGet()
-                mainHandler.post { state.blocked = n }
+                // Pages block hundreds of requests; update the counter at most every 300 ms.
+                blockedTotal.incrementAndGet()
+                if (counterPending.compareAndSet(false, true)) {
+                    mainHandler.postDelayed({
+                        counterPending.set(false)
+                        state.blocked = blockedTotal.get()
+                    }, 300)
+                }
             },
             onStarted = { view, url ->
                 if (!documentStartScripts) injectFallback(view, url)
