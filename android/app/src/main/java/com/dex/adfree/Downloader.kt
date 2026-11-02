@@ -24,6 +24,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
 enum class DlStatus { RUNNING, DONE, FAILED, CANCELLED }
@@ -75,6 +76,7 @@ class Downloader(context: Context, private val settings: Settings) {
         val item = DownloadItem(nextId++, name, url)
         item.persist = persist
         main.post { items.add(0, item) }
+        ACTIVE.incrementAndGet()
         pool.execute { run(item, headers) }
     }
 
@@ -190,6 +192,7 @@ class Downloader(context: Context, private val settings: Settings) {
             }
         } finally {
             main.removeCallbacks(ticker)
+            ACTIVE.decrementAndGet()
             item.speed = 0
             tmp.delete()
         }
@@ -307,9 +310,11 @@ class Downloader(context: Context, private val settings: Settings) {
     private fun mimeOf(name: String): String =
         MimeTypeMap.getSingleton().getMimeTypeFromExtension(name.substringAfterLast('.', "").lowercase()) ?: "application/octet-stream"
 
-    private companion object {
-        const val KEY = "history"
-        const val PARTS = 6
-        const val MIN_BOOST = 2L * 1024 * 1024
+    companion object {
+        /** Number of downloads currently running (read by the keep-alive service). */
+        val ACTIVE = AtomicInteger()
+        private const val KEY = "history"
+        private const val PARTS = 6
+        private const val MIN_BOOST = 2L * 1024 * 1024
     }
 }

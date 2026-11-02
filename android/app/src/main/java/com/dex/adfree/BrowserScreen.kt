@@ -106,6 +106,8 @@ fun BrowserScreen(
     downloader: Downloader,
     onClearData: () -> Unit,
     onFindVideos: () -> Unit,
+    onShowBlocked: () -> Unit,
+    onResetBlocked: () -> Unit,
     onPickMedia: (MediaChoice) -> Unit,
     onToggleDesktop: () -> Unit,
     onConfirmDownload: (PendingDownload) -> Unit,
@@ -254,6 +256,7 @@ fun BrowserScreen(
                             color = Amber,
                             modifier = Modifier
                                 .clip(CircleShape)
+                                .clickable { onShowBlocked() }
                                 .background(Amber.copy(alpha = 0.14f))
                                 .padding(horizontal = 12.dp, vertical = 6.dp),
                         )
@@ -349,6 +352,40 @@ fun BrowserScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(Color.Black),
+                )
+            }
+
+            state.blockedReport?.let { r ->
+                AlertDialog(
+                    onDismissRequest = { state.blockedReport = null },
+                    title = { Text("Blocked so far") },
+                    text = {
+                        Column(Modifier.verticalScroll(rememberScrollState())) {
+                            if (r.categories.isEmpty()) Text("Nothing blocked yet.")
+                            r.categories.forEach { (name, n) ->
+                                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                                    Text(name, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                                    Text("$n", color = Amber, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            if (r.hosts.isNotEmpty()) {
+                                Text(
+                                    "Top sources",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = colors.onSurface.copy(alpha = 0.6f),
+                                    modifier = Modifier.padding(top = 14.dp, bottom = 4.dp),
+                                )
+                            }
+                            r.hosts.forEach { (host, n) ->
+                                Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                                    Text(host, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                    Text("$n", style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = { TextButton(onClick = { state.blockedReport = null }) { Text("Close", color = Amber) } },
+                    dismissButton = { TextButton(onClick = onResetBlocked) { Text("Reset", color = Amber) } },
                 )
             }
 

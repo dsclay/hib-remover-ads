@@ -13,6 +13,9 @@ class WebScripts(context: Context) {
     /** Fallback on YouTube: mutes, fast-forwards and skips any ad that still reaches the player. */
     val ytHush: String = read(context, "web/youtube.js")
 
+    /** Keeps YouTube playing while the app is in the background. */
+    val ytBackground: String = read(context, "scripts/yt-bg.js")
+
     /** Removes sponsored items from YouTube feeds and Shorts. */
     val ytFeed: String = read(context, "scripts/yt-feed.js")
 

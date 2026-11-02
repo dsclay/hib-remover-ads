@@ -42,6 +42,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var assetLoader: WebViewAssetLoader
     private val mainHandler = Handler(Looper.getMainLooper())
     private val blockedTotal = AtomicInteger()
+    private val blockedHosts = java.util.concurrent.ConcurrentHashMap<String, AtomicInteger>()
     private val counterPending = AtomicBoolean(false)
     private lateinit var blocker: AdBlocker
     private lateinit var scripts: WebScripts
@@ -71,6 +72,9 @@ class MainActivity : ComponentActivity() {
         privateSupported = WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)
         deleteLeftoverPrivateProfiles()
         downloader = Downloader(this, state.settings)
+        if (android.os.Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission("android.permission.POST_NOTIFICATIONS") != android.content.pm.PackageManager.PERMISSION_GRANTED
+        ) requestPermissions(arrayOf("android.permission.POST_NOTIFICATIONS"), 1)
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
@@ -105,6 +109,8 @@ class MainActivity : ComponentActivity() {
                     downloader = downloader,
                     onClearData = { clearData() },
                     onFindVideos = { findVideos() },
+                    onShowBlocked = { showBlocked() },
+                    onResetBlocked = { resetBlocked() },
                     onPickMedia = { pickMedia(it) },
                     onToggleDesktop = { toggleDesktop() },
                     onConfirmDownload = { startDownload(it) },
@@ -117,6 +123,35 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         Urls.fromIntent(intent)?.let { addTab(false, it) }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        val music = (getSystemService(AUDIO_SERVICE) as android.media.AudioManager).isMusicActive
+        if (music || Downloader.ACTIVE.get() > 0) startKeepAlive(music)
+    }
+
+    private fun startKeepAlive(music: Boolean) {
+        runCatching {
+            androidx.core.content.ContextCompat.startForegroundService(
+                this, Intent(this, PlaybackService::class.java).putExtra("music", music),
+            )
+        }
+    }
+
+    // ---- Blocked-requests popup ----
+
+    private fun showBlocked() {
+        val hosts = blockedHosts.entries.map { it.key to it.value.get() }.filter { it.first.isNotEmpty() }
+        val cats = hosts.groupBy({ categoryOf(it.first) }, { it.second }).map { (k, v) -> k to v.sum() }.sortedByDescending { it.second }
+        state.blockedReport = BlockedReport(cats, hosts.sortedByDescending { it.second }.take(12))
+    }
+
+    private fun resetBlocked() {
+        blockedHosts.clear()
+        blockedTotal.set(0)
+        state.blocked = 0
+        state.blockedReport = null
     }
 
     override fun onDestroy() {
@@ -157,8 +192,8 @@ class MainActivity : ComponentActivity() {
 
     private fun select(tab: Tab) {
         val old = state.current
-        if (old != null && old !== tab) {
-            // No background audio: silence and pause the tab we leave.
+        if (old != null && old !== tab && Uri.parse(old.url).host?.contains("youtube.com") != true) {
+            // Pause the tab we leave (YouTube tabs keep playing so music can continue).
             runCatching {
                 old.webView.evaluateJavascript(PAUSE_MEDIA, null)
                 old.webView.onPause()
@@ -253,6 +288,7 @@ class MainActivity : ComponentActivity() {
             WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytMain, YOUTUBE_ORIGINS)
             WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytHush, YOUTUBE_ORIGINS)
             WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytFeed, YOUTUBE_ORIGINS)
+            WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytBackground, YOUTUBE_ORIGINS)
             if (state.settings.fasterLoading) WebViewCompat.addDocumentStartJavaScript(wv, scripts.perf, setOf("*"))
         }
 
@@ -265,7 +301,8 @@ class MainActivity : ComponentActivity() {
             assetLoader = assetLoader,
             blockingEnabled = { host -> state.settings.blockAds && !state.settings.isPaused(host) },
             httpsOnly = { state.settings.httpsOnly },
-            onBlocked = {
+            onBlocked = { blockedHost ->
+                blockedHosts.getOrPut(blockedHost) { AtomicInteger() }.incrementAndGet()
                 // Pages block hundreds of requests; update the counter at most every 300 ms.
                 blockedTotal.incrementAndGet()
                 if (counterPending.compareAndSet(false, true)) {
@@ -405,6 +442,7 @@ class MainActivity : ComponentActivity() {
         // Replay what the page itself sent for this file (the real Referer/Origin often differ from the page URL).
         for ((k, v) in d.headers) if (k.lowercase() in REPLAY_HEADERS) headers[k.lowercase().replaceFirstChar { c -> c.uppercase() }] = v
         downloader.start(d.url, d.fileName, headers, persist = !d.tab.isPrivate)
+        startKeepAlive(false)
         Toast.makeText(this, "Downloading ${d.fileName}", Toast.LENGTH_SHORT).show()
     }
 
@@ -435,6 +473,21 @@ class MainActivity : ComponentActivity() {
         const val FIND_MEDIA_JS =
             "(function(){var o=[];document.querySelectorAll('video,video source,audio,audio source').forEach(function(e){" +
                 "var s=e.currentSrc||e.src;if(s&&/^https?:/.test(s))o.push(s)});return JSON.stringify(o)})()"
+        private val POPUPS = Regex("popunder|popads|propeller|clickadu|exoclick|juicyads|trafficjunky|adcash|onclick|clickaine|redirect")
+        private val ADS = Regex("(^|[.\\-])ads?([.\\-0-9]|$)|adserv|adsystem|doubleclick|adnxs|adform|pagead|banner|syndication|sponsor|promo|taboola|outbrain|criteo|pubmatic|rubicon|openx|smartad|adx|advert|monetiz|bidder|prebid")
+        private val TRACKERS = Regex("analytic|metric|stat(s|istic)|telemetry|pixel|beacon|track|segment|mixpanel|amplitude|hotjar|clarity|sentry|crashlytics|collect|(^|[.\\-])logs?[.\\-]|insight")
+
+        /** Rough label for a blocked host, from its name. */
+        fun categoryOf(host: String): String {
+            val h = host.lowercase()
+            return when {
+                POPUPS.containsMatchIn(h) -> "Popups & redirects"
+                TRACKERS.containsMatchIn(h) -> "Trackers & analytics"
+                ADS.containsMatchIn(h) -> "Advertising"
+                else -> "Other ad & tracker requests"
+            }
+        }
+
         const val PAUSE_MEDIA =
             "document.querySelectorAll('video,audio').forEach(function(m){try{m.pause()}catch(e){}})"
         val YOUTUBE_ORIGINS = setOf(

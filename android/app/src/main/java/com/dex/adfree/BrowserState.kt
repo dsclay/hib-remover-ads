@@ -13,6 +13,9 @@ class BrowserState(val settings: Settings) {
     var currentId by mutableIntStateOf(-1)
     var showTabs by mutableStateOf(false)
     var showSettings by mutableStateOf(false)
+
+    /** What has been blocked so far; null while the popup is closed. */
+    var blockedReport by mutableStateOf<BlockedReport?>(null)
     var showDownloads by mutableStateOf(false)
     var blocked by mutableIntStateOf(0)
 
@@ -26,3 +29,5 @@ class BrowserState(val settings: Settings) {
 
     val current: Tab? get() = tabs.firstOrNull { it.id == currentId }
 }
+
+class BlockedReport(val categories: List<Pair<String, Int>>, val hosts: List<Pair<String, Int>>)
