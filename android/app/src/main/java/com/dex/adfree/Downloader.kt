@@ -39,6 +39,8 @@ class DownloadItem(val id: Int, val name: String, val url: String) {
     var uri: String? = null
     var finishedAt = 0L
     @Volatile var abort = false
+    @Volatile var pauseFlag = false
+    var paused by mutableStateOf(false)
     @Volatile var userCancelled = false
     var persist = true
 }
@@ -78,6 +80,15 @@ class Downloader(context: Context, private val settings: Settings) {
         main.post { items.add(0, item) }
         ACTIVE.incrementAndGet()
         pool.execute { run(item, headers) }
+    }
+
+    fun setPaused(item: DownloadItem, value: Boolean) {
+        item.pauseFlag = value
+        item.paused = value
+    }
+
+    private fun waitWhilePaused(item: DownloadItem) {
+        while (item.pauseFlag && !item.abort) Thread.sleep(200)
     }
 
     fun cancel(item: DownloadItem) {
@@ -164,7 +175,7 @@ class Downloader(context: Context, private val settings: Settings) {
             item.total = total
             val parts = if (settings.boostDownloads && ranged && total >= MIN_BOOST) PARTS else 1
             item.parts = parts
-            if (ranged && parts > 1) {
+            if (ranged) {
                 probe.disconnect()
                 multi(item, finalUrl, headers, tmp, total, parts, counter)
             } else if (code == 200) {
@@ -202,6 +213,7 @@ class Downloader(context: Context, private val settings: Settings) {
         FileOutputStream(tmp).use { out ->
             val buf = ByteArray(65536)
             while (true) {
+                waitWhilePaused(item)
                 if (item.abort) throw IOException("cancelled")
                 val r = input.read(buf)
                 if (r < 0) break
@@ -232,6 +244,7 @@ class Downloader(context: Context, private val settings: Settings) {
         var tries = 0
         RandomAccessFile(tmp, "rw").use { raf ->
             while (pos <= end) {
+                waitWhilePaused(item)
                 if (item.abort) throw IOException("cancelled")
                 try {
                     val c = connect(url, headers, "bytes=$pos-$end")
@@ -241,6 +254,7 @@ class Downloader(context: Context, private val settings: Settings) {
                         raf.seek(pos)
                         while (pos <= end) {
                             if (item.abort) throw IOException("cancelled")
+                            if (item.pauseFlag) break // reconnects from this position on resume
                             val r = input.read(buf)
                             if (r < 0) break
                             val n = minOf(r.toLong(), end - pos + 1).toInt()

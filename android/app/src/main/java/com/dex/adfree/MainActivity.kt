@@ -127,8 +127,19 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
+        state.tabs.forEach { runCatching { it.webView.evaluateJavascript("window.__adfreeBg=true", null) } }
         val music = (getSystemService(AUDIO_SERVICE) as android.media.AudioManager).isMusicActive
         if (music || Downloader.ACTIVE.get() > 0) startKeepAlive(music)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        state.tabs.forEach { runCatching { it.webView.resumeTimers() } } // keep page timers (and the player) running
+    }
+
+    override fun onResume() {
+        super.onResume()
+        state.tabs.forEach { runCatching { it.webView.evaluateJavascript("window.__adfreeBg=false", null) } }
     }
 
     private fun startKeepAlive(music: Boolean) {
@@ -180,7 +191,7 @@ class MainActivity : ComponentActivity() {
 
     private fun createTab(isPrivate: Boolean): Tab {
         val id = nextTabId++
-        val wv = WebView(this)
+        val wv = BgWebView(this)
         // Private tabs get their own WebView profile: separate cookies, storage and cache.
         // Must be set before the WebView is used for anything else.
         val profile = if (isPrivate) "$PRIVATE_PREFIX$id" else null

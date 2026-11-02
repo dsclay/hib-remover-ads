@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun DownloadsScreen(downloader: Downloader, settings: Settings, onDismiss: () -> Unit) {
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    Surface(modifier = Modifier.fillMaxSize(), color = GlassScrim) {
         Column(
             Modifier
                 .fillMaxSize()
@@ -66,7 +66,7 @@ fun DownloadsScreen(downloader: Downloader, settings: Settings, onDismiss: () ->
 private fun DownloadRow(item: DownloadItem, downloader: Downloader) {
     val context = LocalContext.current
     val dim = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-    Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surfaceVariant, modifier = Modifier.fillMaxWidth()) {
+    Surface(shape = RoundedCornerShape(18.dp), color = GlassFill, border = glassBorder(), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(start = 16.dp, top = 12.dp, end = 8.dp, bottom = 4.dp)) {
             Text(item.name, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             val size = { n: Long -> Formatter.formatShortFileSize(context, n) }
@@ -82,8 +82,14 @@ private fun DownloadRow(item: DownloadItem, downloader: Downloader) {
                     )
                     val of = if (item.total > 0) " of ${size(item.total)}" else ""
                     val boost = if (item.parts > 1) " · ${item.parts}x" else ""
-                    Text("${size(item.done)}$of · ${size(item.speed)}/s$boost", style = MaterialTheme.typography.labelMedium, color = dim)
-                    Row { TextButton(onClick = { downloader.cancel(item) }) { Text("Cancel", color = Amber) } }
+                    val line = if (item.paused) "Paused · ${size(item.done)}$of" else "${size(item.done)}$of · ${size(item.speed)}/s$boost"
+                    Text(line, style = MaterialTheme.typography.labelMedium, color = dim)
+                    Row {
+                        TextButton(onClick = { downloader.setPaused(item, !item.paused) }) {
+                            Text(if (item.paused) "Resume" else "Pause", color = Amber)
+                        }
+                        TextButton(onClick = { downloader.cancel(item) }) { Text("Cancel", color = Amber) }
+                    }
                 }
                 DlStatus.DONE -> {
                     Text(if (item.total > 0) size(item.total) else "Done", style = MaterialTheme.typography.labelMedium, color = dim)

@@ -27,7 +27,7 @@ fun SettingsScreen(
     onClearData: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    Surface(modifier = Modifier.fillMaxSize(), color = GlassScrim) {
         Column(
             Modifier
                 .fillMaxSize()
@@ -68,7 +68,8 @@ fun SettingsScreen(
 
             Surface(
                 shape = RoundedCornerShape(18.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant,
+                color = GlassFill,
+        border = glassBorder(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 12.dp),
@@ -96,7 +97,8 @@ fun SettingsScreen(
 fun SwitchRow(title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Surface(
         shape = RoundedCornerShape(18.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        color = GlassFill,
+        border = glassBorder(),
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 12.dp),

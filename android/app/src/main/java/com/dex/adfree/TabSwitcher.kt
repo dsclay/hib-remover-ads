@@ -38,7 +38,7 @@ fun TabSwitcher(
     onNew: (Boolean) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+    Surface(modifier = Modifier.fillMaxSize(), color = GlassScrim) {
         Column(
             Modifier
                 .fillMaxSize()
@@ -63,8 +63,8 @@ fun TabSwitcher(
                     val shape = RoundedCornerShape(18.dp)
                     Surface(
                         shape = shape,
-                        color = if (tab.isPrivate) PrivateBg else MaterialTheme.colorScheme.surfaceVariant,
-                        border = if (tab.id == state.currentId) BorderStroke(1.5.dp, Amber) else null,
+                        color = if (tab.isPrivate) PrivateBg.copy(alpha = 0.7f) else GlassFill,
+                        border = if (tab.id == state.currentId) BorderStroke(1.5.dp, Amber) else glassBorder(),
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(shape)

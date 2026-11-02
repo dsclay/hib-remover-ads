@@ -127,6 +127,9 @@ fun BrowserScreen(
         if (!editing) field = TextFieldValue(display(tab?.url.orEmpty()))
     }
 
+    val overlayOpen = state.showSettings || state.showTabs || state.showDownloads || state.blockedReport != null ||
+        state.mediaChoices != null || state.pendingDownload != null
+
     Surface(modifier = Modifier.fillMaxSize(), color = colors.background) {
         Box(Modifier.fillMaxSize()) {
             Column(
@@ -137,7 +140,8 @@ fun BrowserScreen(
                 // Address pill
                 Surface(
                     shape = RoundedCornerShape(50),
-                    color = if (tab?.isPrivate == true) PrivateBg else colors.surfaceVariant,
+                    color = if (tab?.isPrivate == true) PrivateBg.copy(alpha = 0.8f) else GlassFill,
+                    border = glassBorder(),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 8.dp)
@@ -222,6 +226,7 @@ fun BrowserScreen(
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxWidth(),
+                            update = { v -> blurView(v, overlayOpen) },
                         )
                     }
                 } else {
@@ -231,7 +236,8 @@ fun BrowserScreen(
                 // Floating bottom bar
                 Surface(
                     shape = RoundedCornerShape(28.dp),
-                    color = colors.surfaceVariant,
+                    color = GlassFill,
+                    border = glassBorder(),
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 8.dp),
@@ -357,6 +363,8 @@ fun BrowserScreen(
 
             state.blockedReport?.let { r ->
                 AlertDialog(
+                    containerColor = GlassDialog,
+                    shape = RoundedCornerShape(28.dp),
                     onDismissRequest = { state.blockedReport = null },
                     title = { Text("Blocked so far") },
                     text = {
@@ -391,6 +399,8 @@ fun BrowserScreen(
 
             state.mediaChoices?.let { choices ->
                 AlertDialog(
+                    containerColor = GlassDialog,
+                    shape = RoundedCornerShape(28.dp),
                     onDismissRequest = { state.mediaChoices = null },
                     title = { Text("Videos on this page") },
                     text = {
@@ -440,6 +450,8 @@ fun BrowserScreen(
 
             state.pendingDownload?.let { d ->
                 AlertDialog(
+                    containerColor = GlassDialog,
+                    shape = RoundedCornerShape(28.dp),
                     onDismissRequest = { state.pendingDownload = null },
                     title = { Text("Download file?") },
                     text = {
