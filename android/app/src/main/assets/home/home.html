@@ -7,32 +7,46 @@
 <title>Home</title>
 <style>
   :root { color-scheme: dark; }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
-    margin: 0; min-height: 100vh; background: #111418; color: #e6e9ed;
-    font-family: system-ui, sans-serif; display: flex; flex-direction: column;
-    align-items: center; padding: 18vh 20px 40px;
+    margin: 0; min-height: 100vh; color: #e6e9ed; font-family: system-ui, sans-serif;
+    display: flex; flex-direction: column; align-items: center; padding: 14vh 20px 40px;
+    background:
+      radial-gradient(60% 40% at 15% 8%, rgba(243,178,60,.22), transparent 70%),
+      radial-gradient(55% 40% at 90% 30%, rgba(118,75,162,.28), transparent 70%),
+      radial-gradient(60% 45% at 30% 95%, rgba(56,249,215,.14), transparent 70%),
+      #0f1217;
+    background-attachment: fixed;
   }
-  h1 { font-size: 28px; font-weight: 600; margin: 0 0 28px; letter-spacing: .3px; }
-  h1 span { color: #f3b23c; }
+  h1 { font-size: 32px; font-weight: 700; margin: 0 0 26px; letter-spacing: .2px; }
+  h1 span { background: linear-gradient(90deg, #f3b23c, #ff8a5c); -webkit-background-clip: text; background-clip: text; color: transparent; }
   form { width: 100%; max-width: 520px; }
   input {
-    width: 100%; height: 50px; border: 0; border-radius: 25px; padding: 0 22px;
-    background: #1e2329; color: #e6e9ed; font-size: 16px; outline: none;
+    width: 100%; height: 52px; border-radius: 26px; padding: 0 24px; font-size: 16px; outline: none;
+    color: #e6e9ed; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14);
+    -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
   }
-  input:focus { box-shadow: 0 0 0 2px #f3b23c; }
+  input::placeholder { color: rgba(230,233,237,.5); }
+  input:focus { border-color: #f3b23c; box-shadow: 0 0 0 3px rgba(243,178,60,.25); }
   .hp-tiles {
     display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
-    width: 100%; max-width: 520px; margin-top: 34px;
+    width: 100%; max-width: 520px; margin-top: 30px;
   }
   .hp-tile {
-    display: flex; flex-direction: column; align-items: center; gap: 8px;
-    padding: 16px 6px; border-radius: 18px; background: #1e2329;
-    color: inherit; text-decoration: none; font-size: 13px;
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    padding: 18px 6px 14px; border-radius: 24px; color: inherit; text-decoration: none; font-size: 13px;
+    font-weight: 500; background: linear-gradient(160deg, rgba(255,255,255,.12), rgba(255,255,255,.04));
+    border: 1px solid rgba(255,255,255,.13); box-shadow: 0 8px 24px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.16);
+    -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+    transition: transform .15s ease, background .15s ease;
   }
+  .hp-tile:active { transform: scale(.94); background: rgba(255,255,255,.14); }
   .hp-tile b {
-    width: 40px; height: 40px; border-radius: 50%; background: #2a313a; color: #f3b23c;
-    display: flex; align-items: center; justify-content: center; font-size: 18px;
+    width: 50px; height: 50px; border-radius: 16px; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, var(--a), var(--b));
+    box-shadow: 0 6px 16px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.35);
   }
 </style>
 </head>
@@ -42,12 +56,12 @@
     <input name="q" type="search" placeholder="Search the web" autocomplete="off" enterkeyhint="search">
   </form>
   <div class="hp-tiles">
-    <a class="hp-tile" href="https://m.youtube.com/"><b>Y</b>YouTube</a>
-    <a class="hp-tile" href="https://www.google.com/"><b>G</b>Google</a>
-    <a class="hp-tile" href="https://en.wikipedia.org/"><b>W</b>Wikipedia</a>
-    <a class="hp-tile" href="https://github.com/"><b>H</b>GitHub</a>
-    <a class="hp-tile" href="https://www.reddit.com/"><b>R</b>Reddit</a>
-    <a class="hp-tile" href="https://duckduckgo.com/"><b>D</b>DuckDuckGo</a>
+    <a class="hp-tile" href="https://m.youtube.com/" style="--a:#ff5f6d;--b:#ff9966"><b><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg></b><span>YouTube</span></a>
+    <a class="hp-tile" href="https://www.google.com/" style="--a:#4facfe;--b:#00c6ff"><b><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="11" cy="11" r="6" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></b><span>Google</span></a>
+    <a class="hp-tile" href="https://en.wikipedia.org/" style="--a:#a18cd1;--b:#fbc2eb"><b><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M12 6c-2-1.5-4.500-2-8-1.500v12.500c3.500-.5 6 0 8 1.500 2-1.500 4.500-2 8-1.500V4.500C16.500 4 14 4.500 12 6z M12 6v12.500" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg></b><span>Wikipedia</span></a>
+    <a class="hp-tile" href="https://github.com/" style="--a:#667eea;--b:#764ba2"><b><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M9 7l-5 5 5 5M15 7l5 5-5 5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></b><span>GitHub</span></a>
+    <a class="hp-tile" href="https://www.reddit.com/" style="--a:#f7971e;--b:#ffd200"><b><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M5 5h14a2 2 0 012 2v8a2 2 0 01-2 2h-7l-4.500 3.500V17H5a2 2 0 01-2-2V7a2 2 0 012-2z" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linejoin="round"/></svg></b><span>Reddit</span></a>
+    <a class="hp-tile" href="https://duckduckgo.com/" style="--a:#43e97b;--b:#38f9d7"><b><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M12 3l7.500 3v5.500c0 4.500-3 8-7.500 9.500C7.500 19.500 4.500 16 4.500 11.500V6z" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linejoin="round"/><path d="M8.500 12l2.500 2.500 4.500-5" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round"/></svg></b><span>DuckDuckGo</span></a>
   </div>
 </body>
 </html>
