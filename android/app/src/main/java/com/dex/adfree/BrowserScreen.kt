@@ -67,9 +67,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 
-val Amber = Color(0xFFF3B23C)
+val Amber = Color(0xFFFF3B30) // Nothing-style signal red (name kept from the old amber)
 val PrivateBg = Color(0xFF2A2140)
 val PrivateFg = Color(0xFFB794F6)
 
@@ -78,10 +79,14 @@ fun AdFreeTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = darkColorScheme(
             primary = Amber,
-            background = Color(0xFF111418),
-            surface = Color(0xFF111418),
-            surfaceVariant = Color(0xFF1E2329),
+            background = Color(0xFF000000),
+            surface = Color(0xFF000000),
+            surfaceVariant = Color(0xFF161616),
             onSurface = Color(0xFFE6E9ED),
+        ),
+        typography = androidx.compose.material3.Typography(
+            titleLarge = androidx.compose.ui.text.TextStyle(fontFamily = Dot, fontSize = 24.sp, letterSpacing = 1.sp),
+            headlineSmall = androidx.compose.ui.text.TextStyle(fontFamily = Dot, fontSize = 22.sp, letterSpacing = 1.sp),
         ),
         content = content,
     )
@@ -258,7 +263,7 @@ fun BrowserScreen(
                         Spacer(Modifier.weight(1f))
                         Text(
                             "${state.blocked}",
-                            style = MaterialTheme.typography.labelMedium,
+                            style = MaterialTheme.typography.labelMedium.copy(fontFamily = Dot, fontSize = 15.sp),
                             color = Amber,
                             modifier = Modifier
                                 .clip(CircleShape)
@@ -436,7 +441,7 @@ fun BrowserScreen(
                                             }
                                             Button(
                                                 onClick = { onPickMedia(c) },
-                                                colors = ButtonDefaults.buttonColors(containerColor = Amber, contentColor = Color.Black),
+                                                colors = ButtonDefaults.buttonColors(containerColor = Amber, contentColor = Color.White),
                                             ) { Text("Download", fontWeight = FontWeight.Bold) }
                                         }
                                     }
@@ -475,7 +480,7 @@ fun BrowserScreen(
                                 state.pendingDownload = null
                                 onConfirmDownload(d)
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = Amber, contentColor = Color.Black),
+                            colors = ButtonDefaults.buttonColors(containerColor = Amber, contentColor = Color.White),
                         ) { Text(if (d.risky) "Download anyway" else "Download", fontWeight = FontWeight.Bold) }
                     },
                     dismissButton = {

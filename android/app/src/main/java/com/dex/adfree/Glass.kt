@@ -5,12 +5,17 @@ import android.view.View
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 
+/** Dot-matrix display font (res/font/ndot.ttf) used for titles and counters, in the style of Nothing OS. */
+val Dot = FontFamily(Font(R.font.ndot))
+
 /** "Liquid glass" look: translucent panels with a faint bright edge, over a blurred page. */
-val GlassFill = Color(0xFF2B313B).copy(alpha = 0.55f)
-val GlassScrim = Color(0xFF0B0D11).copy(alpha = 0.45f)
-val GlassDialog = Color(0xFF232830).copy(alpha = 0.78f)
+val GlassFill = Color(0xFF2C2C2E).copy(alpha = 0.55f)
+val GlassScrim = Color(0xFF000000).copy(alpha = 0.5f)
+val GlassDialog = Color(0xFF1C1C1E).copy(alpha = 0.8f)
 
 fun glassBorder(): BorderStroke =
     BorderStroke(0.8.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.38f), Color.White.copy(alpha = 0.06f))))
