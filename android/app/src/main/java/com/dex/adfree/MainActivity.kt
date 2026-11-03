@@ -51,6 +51,7 @@ class MainActivity : ComponentActivity() {
     private var privateSupported = false
     private var nextTabId = 0
     private lateinit var downloader: Downloader
+    private lateinit var library: Library
     private var mobileUa = ""
     private var desktopUa = ""
 
@@ -72,6 +73,7 @@ class MainActivity : ComponentActivity() {
         privateSupported = WebViewFeature.isFeatureSupported(WebViewFeature.MULTI_PROFILE)
         deleteLeftoverPrivateProfiles()
         downloader = Downloader(this, state.settings)
+        library = Library(this)
         if (android.os.Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission("android.permission.POST_NOTIFICATIONS") != android.content.pm.PackageManager.PERMISSION_GRANTED
         ) requestPermissions(arrayOf("android.permission.POST_NOTIFICATIONS"), 1)
@@ -81,6 +83,7 @@ class MainActivity : ComponentActivity() {
                 when {
                     state.customView != null -> exitFullscreen()
                     state.showSettings -> state.showSettings = false
+                    state.showLibrary -> state.showLibrary = false
                     state.showDownloads -> state.showDownloads = false
                     state.showTabs -> state.showTabs = false
                     state.current?.webView?.canGoBack() == true -> state.current?.webView?.goBack()
@@ -109,6 +112,7 @@ class MainActivity : ComponentActivity() {
                     onNewTab = { addTab(it) },
                     onDownloads = { state.showDownloads = true },
                     downloader = downloader,
+                    library = library,
                     onClearData = { clearData() },
                     onFindVideos = { findVideos() },
                     onShowBlocked = { showBlocked() },
@@ -349,6 +353,7 @@ class MainActivity : ComponentActivity() {
 
             override fun onReceivedTitle(view: WebView?, title: String?) {
                 tab.title = title.orEmpty()
+                if (!tab.isPrivate) view?.url?.let { library.titled(it, title.orEmpty()) }
             }
 
             override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
@@ -367,6 +372,7 @@ class MainActivity : ComponentActivity() {
 
     private fun sync(tab: Tab, url: String) {
         tab.url = url
+        if (!tab.isPrivate) library.visit(url)
         tab.canGoBack = tab.webView.canGoBack()
         tab.canGoForward = tab.webView.canGoForward()
     }
@@ -415,6 +421,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun clearData() {
+        library.clearHistory()
         getSharedPreferences("session", MODE_PRIVATE).edit().clear().apply()
         CookieManager.getInstance().removeAllCookies(null)
         WebStorage.getInstance().deleteAllData()

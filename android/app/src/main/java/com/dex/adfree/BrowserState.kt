@@ -13,6 +13,8 @@ class BrowserState(val settings: Settings) {
     var currentId by mutableIntStateOf(-1)
     var showTabs by mutableStateOf(false)
     var showSettings by mutableStateOf(false)
+    var showLibrary by mutableStateOf(false)
+    var libraryTab by mutableStateOf(0) // 0 = bookmarks, 1 = history
 
     /** What has been blocked so far; null while the popup is closed. */
     var blockedReport by mutableStateOf<BlockedReport?>(null)

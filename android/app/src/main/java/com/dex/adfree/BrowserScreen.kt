@@ -109,6 +109,7 @@ fun BrowserScreen(
     onNewTab: (Boolean) -> Unit,
     onDownloads: () -> Unit,
     downloader: Downloader,
+    library: Library,
     onClearData: () -> Unit,
     onFindVideos: () -> Unit,
     onShowBlocked: () -> Unit,
@@ -133,7 +134,7 @@ fun BrowserScreen(
     }
 
     val overlayOpen = state.showSettings || state.showTabs || state.showDownloads || state.blockedReport != null ||
-        state.mediaChoices != null || state.pendingDownload != null
+        state.mediaChoices != null || state.pendingDownload != null || state.showLibrary
 
     Surface(modifier = Modifier.fillMaxSize(), color = colors.background) {
         Box(Modifier.fillMaxSize()) {
@@ -304,6 +305,10 @@ fun BrowserScreen(
                     host = host,
                     blockPaused = host != null && state.settings.isPaused(host),
                     url = tab?.url,
+                    bookmarked = tab?.url?.let { library.isBookmarked(it) } == true,
+                    onToggleBookmark = { tab?.let { library.toggleBookmark(it.url, it.title) } },
+                    onOpenBookmarks = { state.libraryTab = 0; state.showLibrary = true },
+                    onOpenHistory = { state.libraryTab = 1; state.showLibrary = true },
                     onDismiss = { menuOpen = false },
                     onNewTab = onNewTab,
                     onDownloads = onDownloads,
@@ -329,6 +334,10 @@ fun BrowserScreen(
                     onNew = onNewTab,
                     onDismiss = { state.showTabs = false },
                 )
+            }
+
+            if (state.showLibrary) {
+                LibraryScreen(library, state, onOpen = { onGo(it); state.showLibrary = false }, onDismiss = { state.showLibrary = false })
             }
 
             if (state.showDownloads) {

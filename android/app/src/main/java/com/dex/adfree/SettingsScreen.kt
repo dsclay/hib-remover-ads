@@ -81,7 +81,7 @@ fun SettingsScreen(
                     Column(Modifier.weight(1f)) {
                         Text("Clear browsing data", fontWeight = FontWeight.SemiBold)
                         Text(
-                            "Cookies, site storage and cache",
+                            "Cookies, site storage, cache and history",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                         )

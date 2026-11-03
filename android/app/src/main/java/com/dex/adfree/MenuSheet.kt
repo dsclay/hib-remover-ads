@@ -31,6 +31,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.PlayArrow
@@ -64,6 +67,10 @@ fun MenuSheet(
     host: String?,
     blockPaused: Boolean,
     url: String?,
+    bookmarked: Boolean,
+    onToggleBookmark: () -> Unit,
+    onOpenBookmarks: () -> Unit,
+    onOpenHistory: () -> Unit,
     onDismiss: () -> Unit,
     onNewTab: (Boolean) -> Unit,
     onDownloads: () -> Unit,
@@ -121,10 +128,11 @@ fun MenuSheet(
                 }
                 Spacer(Modifier.height(14.dp))
                 Row(Modifier.fillMaxWidth()) {
-                    Cell(Icons.Default.Refresh, "Reload", Modifier.weight(1f), onClick = act(onReload))
+                    Cell(Icons.Default.Star, if (bookmarked) "Saved" else "Bookmark", Modifier.weight(1f), active = bookmarked, enabled = canShare, onClick = act(onToggleBookmark))
+                    Cell(Icons.Default.Favorite, "Bookmarks", Modifier.weight(1f), onClick = act(onOpenBookmarks))
+                    Cell(Icons.Default.DateRange, "History", Modifier.weight(1f), onClick = act(onOpenHistory))
                     Cell(Icons.Default.Share, "Share", Modifier.weight(1f), enabled = canShare, onClick = act { share(context, url.orEmpty()) })
                     Cell(Icons.Default.Close, "Copy link", Modifier.weight(1f), enabled = canShare, onClick = act { copy(context, url.orEmpty()) })
-                    Spacer(Modifier.weight(2f))
                 }
 
                 Spacer(Modifier.height(12.dp))
