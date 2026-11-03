@@ -288,7 +288,9 @@ class MainActivity : ComponentActivity() {
                 .replace("; wv", "")
                 .replace(Regex("Version/\\d+\\.\\d+ "), "")
         }
-        mobileUa = wv.settings.userAgentString
+        // Look like Chrome, not an embedded WebView: some sites ("; wv" in the user agent) serve a broken or limited page.
+        mobileUa = wv.settings.userAgentString.replace("; wv)", ")").replace(" Version/4.0", "")
+        wv.settings.userAgentString = mobileUa
         desktopUa = mobileUa.replace(Regex("\\(Linux; Android [^)]*\\)"), "(X11; Linux x86_64)").replace(" Mobile Safari", " Safari").replace(" Version/4.0", "")
         cookieManagerFor(tab).setAcceptThirdPartyCookies(wv, true)
         if (WebViewFeature.isFeatureSupported(WebViewFeature.SAFE_BROWSING_ENABLE)) {
@@ -471,8 +473,23 @@ class MainActivity : ComponentActivity() {
             useWideViewPort = tab.desktop
             loadWithOverviewMode = tab.desktop
         }
-        tab.webView.clearCache(false)
-        tab.webView.reload()
+        tab.webView.clearCache(true) // the disk cache can hold the other layout, since many sites don't vary by user agent
+        val target = if (tab.desktop) desktopUrl(tab.url) else tab.url
+        if (target.isBlank() || Urls.isHome(target)) tab.webView.reload() else tab.webView.loadUrl(target)
+    }
+
+    /** m.example.com / mobile.example.com / en.m.example.com to the desktop address; other URLs are unchanged. */
+    private fun desktopUrl(url: String): String {
+        val uri = Uri.parse(url)
+        val host = uri.host ?: return url
+        val desktop = when {
+            host.startsWith("m.") -> host.removePrefix("m.")
+            host.startsWith("mobile.") -> host.removePrefix("mobile.")
+            host.contains(".m.") -> host.replaceFirst(".m.", ".")
+            else -> return url
+        }
+        val authority = if (uri.port != -1) "$desktop:${uri.port}" else desktop
+        return uri.buildUpon().authority(authority).build().toString()
     }
 
     // ---- Downloads ----

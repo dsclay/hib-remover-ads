@@ -1,5 +1,7 @@
 // Faster page loading: lets the browser defer off-screen images and frames, and decode images off the main thread.
 (() => {
+  // Heavy single-page sites handle their own lazy loading; leave them alone.
+  if (/(^|\.)(reddit\.com|redd\.it|github\.com)$/.test(location.hostname)) return;
   const mark = (el) => {
     if (el.tagName === 'IMG') {
       if (!el.hasAttribute('loading') && el.getAttribute('fetchpriority') !== 'high') el.loading = 'lazy';

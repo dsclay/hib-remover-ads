@@ -87,6 +87,8 @@ class AdBlocker(context: Context) {
 
         // Layer 2: the big compiled rule set, once loaded. A site's own hosts (github.com and githubassets.com,
         // reddit.com and redditstatic.com) are exempt so broad patterns cannot break the site's own scripts.
+        // Sites that break with broad rules (their ads are served from their own pages anyway).
+        if (page != null && COMPAT_SITES.any { page == it || page.endsWith(".$it") }) return false
         val brand = page?.let { siteOf(it).substringBefore('.') }
         if (brand != null && brand.length >= 4 && host.contains(brand)) return false
         val ext = extended ?: return false
@@ -219,6 +221,8 @@ class AdBlocker(context: Context) {
     }
 
     private companion object {
+        val COMPAT_SITES = setOf("reddit.com", "redd.it", "github.com")
+
         // Video and site infrastructure that domain rules must never touch.
         val NEVER_BLOCK_DOMAINS = setOf(
             "youtube.com", "googlevideo.com", "ytimg.com", "ggpht.com",
