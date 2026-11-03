@@ -89,7 +89,9 @@ class MainActivity : ComponentActivity() {
             }
         })
 
-        addTab(false, Urls.fromIntent(intent) ?: Urls.HOME)
+        val launchUrl = Urls.fromIntent(intent)
+        val restored = restoreTabs()
+        if (launchUrl != null) addTab(false, launchUrl) else if (!restored) addTab(false, Urls.HOME)
 
         setContent {
             AdFreeTheme {
@@ -127,6 +129,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onPause() {
         super.onPause()
+        saveTabs()
         state.tabs.forEach { runCatching { it.webView.evaluateJavascript("window.__adfreeBg=true", null) } }
         val music = (getSystemService(AUDIO_SERVICE) as android.media.AudioManager).isMusicActive
         if (music || Downloader.ACTIVE.get() > 0) startKeepAlive(music)
@@ -385,7 +388,34 @@ class MainActivity : ComponentActivity() {
         return if (state.settings.httpsOnly) Urls.upgrade(url) else url
     }
 
+    // ---- Keep open tabs between launches (private tabs are never saved) ----
+
+    private fun saveTabs() {
+        val urls = org.json.JSONArray()
+        var current = 0
+        state.tabs.filter { !it.isPrivate && it.url.isNotBlank() }.forEachIndexed { i, t ->
+            urls.put(t.url)
+            if (t.id == state.currentId) current = i
+        }
+        getSharedPreferences("session", MODE_PRIVATE).edit().putString("tabs", urls.toString()).putInt("current", current).apply()
+    }
+
+    private fun restoreTabs(): Boolean {
+        val p = getSharedPreferences("session", MODE_PRIVATE)
+        val arr = runCatching { org.json.JSONArray(p.getString("tabs", "[]")) }.getOrNull() ?: return false
+        if (arr.length() == 0) return false
+        val current = p.getInt("current", 0)
+        var selected: Tab? = null
+        for (i in 0 until minOf(arr.length(), MAX_RESTORED)) {
+            val t = addTab(false, arr.getString(i))
+            if (i == current) selected = t
+        }
+        selected?.let { select(it) }
+        return state.tabs.isNotEmpty()
+    }
+
     private fun clearData() {
+        getSharedPreferences("session", MODE_PRIVATE).edit().clear().apply()
         CookieManager.getInstance().removeAllCookies(null)
         WebStorage.getInstance().deleteAllData()
         state.tabs.filter { !it.isPrivate }.forEach { it.webView.clearCache(true) }
@@ -499,6 +529,7 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        const val MAX_RESTORED = 10
         const val PAUSE_MEDIA =
             "document.querySelectorAll('video,audio').forEach(function(m){try{m.pause()}catch(e){}})"
         val YOUTUBE_ORIGINS = setOf(
