@@ -25,18 +25,13 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Build debug APK
-        working-directory: android
-        run: gradle assembleDebug --stacktrace
-
-      # Release = minified and faster. If it ever fails, the debug APK is still uploaded.
+      # Release only: smaller and faster, signed with the fixed key so it updates the installed app in place.
       - name: Build release APK
         working-directory: android
-        continue-on-error: true
         run: gradle assembleRelease --stacktrace
 
       - uses: actions/upload-artifact@v4
-        if: always()
         with:
-          name: adfree-browser-apks
-          path: android/app/build/outputs/apk/*/*.apk
+          name: adfree-browser
+          path: android/app/build/outputs/apk/release/*.apk
+          retention-days: 7

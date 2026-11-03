@@ -12,17 +12,29 @@ android {
         applicationId = "com.dex.adfree"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
+        // CI sets GITHUB_RUN_NUMBER, so every build is newer than the last and installs over it.
+        versionCode = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
         versionName = "0.1.0"
+    }
+
+    // One fixed key for every build, so a new APK updates the installed app in place
+    // (no uninstall, no second copy). Personal-use key; it only protects updates of this app.
+    signingConfigs {
+        create("release") {
+            storeFile = file("adfree-release.jks")
+            storePassword = "adfree-personal"
+            keyAlias = "adfree"
+            keyPassword = "adfree-personal"
+        }
     }
 
     buildTypes {
         release {
-            // Smaller and faster than debug. Signed with the debug key so it installs directly.
+            // Smaller and faster than debug.
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 

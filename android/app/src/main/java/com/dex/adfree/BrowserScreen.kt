@@ -263,7 +263,7 @@ fun BrowserScreen(
                         Spacer(Modifier.weight(1f))
                         Text(
                             "${state.blocked}",
-                            style = MaterialTheme.typography.labelMedium.copy(fontFamily = Dot, fontSize = 15.sp),
+                            style = MaterialTheme.typography.labelMedium.copy(fontFamily = Dot, fontSize = 18.sp),
                             color = Amber,
                             modifier = Modifier
                                 .clip(CircleShape)
