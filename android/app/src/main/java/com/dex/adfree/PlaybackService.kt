@@ -82,7 +82,7 @@ class PlaybackService : Service() {
             else -> "$n download(s) running"
         }
         return NotificationCompat.Builder(this, CHANNEL)
-            .setContentTitle("Sonic")
+            .setContentTitle("Hedgehog")
             .setContentText(text)
             .setSmallIcon(if (music) android.R.drawable.ic_media_play else android.R.drawable.stat_sys_download)
             .setContentIntent(open)
