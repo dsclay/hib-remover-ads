@@ -292,46 +292,33 @@ fun BrowserScreen(
                             IconButton(onClick = { menuOpen = true }) {
                                 Icon(Icons.Default.MoreVert, contentDescription = "Menu")
                             }
-                            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                                DropdownMenuItem(
-                                    text = { Text("New tab") },
-                                    onClick = { menuOpen = false; onNewTab(false) },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("New private tab") },
-                                    onClick = { menuOpen = false; onNewTab(true) },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Downloads") },
-                                    onClick = { menuOpen = false; onDownloads() },
-                                )
-                                if (host != null) {
-                                    val paused = state.settings.isPaused(host)
-                                    DropdownMenuItem(
-                                        text = { Text(if (paused) "Resume blocking on this site" else "Pause blocking on this site") },
-                                        onClick = {
-                                            menuOpen = false
-                                            state.settings.setPaused(host, !paused)
-                                            onReload()
-                                        },
-                                    )
-                                }
-                                DropdownMenuItem(
-                                    text = { Text("Download video") },
-                                    onClick = { menuOpen = false; onFindVideos() },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(if (tab?.desktop == true) "Mobile site" else "Desktop site") },
-                                    onClick = { menuOpen = false; onToggleDesktop() },
-                                )
-                                DropdownMenuItem(
-                                    text = { Text("Settings") },
-                                    onClick = { menuOpen = false; state.showSettings = true },
-                                )
-                            }
                         }
                     }
                 }
+            }
+
+            if (menuOpen) {
+                MenuSheet(
+                    blocked = state.blocked,
+                    desktop = tab?.desktop == true,
+                    host = host,
+                    blockPaused = host != null && state.settings.isPaused(host),
+                    url = tab?.url,
+                    onDismiss = { menuOpen = false },
+                    onNewTab = onNewTab,
+                    onDownloads = onDownloads,
+                    onFindVideos = onFindVideos,
+                    onToggleDesktop = onToggleDesktop,
+                    onToggleBlock = {
+                        if (host != null) {
+                            state.settings.setPaused(host, !state.settings.isPaused(host))
+                            onReload()
+                        }
+                    },
+                    onReload = onReload,
+                    onSettings = { state.showSettings = true },
+                    onShowBlocked = onShowBlocked,
+                )
             }
 
             if (state.showTabs) {
