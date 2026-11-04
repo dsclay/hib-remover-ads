@@ -25,6 +25,24 @@ class Settings(context: Context) {
         prefs.edit().putBoolean(KEY_BOOST, value).apply()
     }
 
+    /** Cosmetic ad-box hiding (a large style sheet on every page; can slow big pages). Applies to new tabs. */
+    var hideAdBoxes by mutableStateOf(prefs.getBoolean(KEY_BOXES, true))
+        private set
+
+    fun updateHideAdBoxes(value: Boolean) {
+        hideAdBoxes = value
+        prefs.edit().putBoolean(KEY_BOXES, value).apply()
+    }
+
+    /** Opens reddit.com pages as old.reddit.com, which is much lighter. */
+    var lightReddit by mutableStateOf(prefs.getBoolean(KEY_REDDIT, false))
+        private set
+
+    fun updateLightReddit(value: Boolean) {
+        lightReddit = value
+        prefs.edit().putBoolean(KEY_REDDIT, value).apply()
+    }
+
     /** Lazy-load images and frames. Read when a tab is created, so it applies to new tabs. */
     var fasterLoading by mutableStateOf(prefs.getBoolean(KEY_FAST, true))
         private set
@@ -58,6 +76,8 @@ class Settings(context: Context) {
         const val KEY_BLOCK = "blockAds"
         const val KEY_HTTPS = "httpsOnly"
         const val KEY_BOOST = "boostDownloads"
+        const val KEY_BOXES = "hideAdBoxes"
+        const val KEY_REDDIT = "lightReddit"
         const val KEY_FAST = "fasterLoading"
         const val KEY_PAUSED = "pausedHosts"
     }

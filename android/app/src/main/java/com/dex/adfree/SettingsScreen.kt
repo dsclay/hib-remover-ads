@@ -60,6 +60,18 @@ fun SettingsScreen(
             )
 
             SwitchRow(
+                title = "Hide ad boxes",
+                subtitle = "Hides empty ad spaces on pages. Turn off if big pages feel slow. Applies to new tabs.",
+                checked = settings.hideAdBoxes,
+                onChange = settings::updateHideAdBoxes,
+            )
+            SwitchRow(
+                title = "Lighter Reddit",
+                subtitle = "Opens Reddit as old.reddit.com. Plainer, but fast and doesn't freeze.",
+                checked = settings.lightReddit,
+                onChange = settings::updateLightReddit,
+            )
+            SwitchRow(
                 title = "Faster page loading",
                 subtitle = "Lazy-load images and frames. Applies to new tabs.",
                 checked = settings.fasterLoading,

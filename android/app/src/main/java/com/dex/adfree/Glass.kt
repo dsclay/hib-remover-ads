@@ -21,7 +21,11 @@ fun glassBorder(): BorderStroke =
     BorderStroke(0.8.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.38f), Color.White.copy(alpha = 0.06f))))
 
 /** Blurs a view (Android 12+); used on the page while a panel is open on top of it. */
+private val blurState = java.util.WeakHashMap<View, Boolean>()
+
 fun blurView(v: View, on: Boolean) {
+    if ((blurState[v] ?: false) == on) return // called on every recomposition; only touch the view when it changes
+    blurState[v] = on
     if (Build.VERSION.SDK_INT >= 31) {
         v.setRenderEffect(
             if (on) android.graphics.RenderEffect.createBlurEffect(40f, 40f, android.graphics.Shader.TileMode.CLAMP) else null,

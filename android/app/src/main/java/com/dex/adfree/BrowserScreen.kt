@@ -3,6 +3,13 @@ package com.dex.adfree
 import android.net.Uri
 import android.text.format.Formatter
 import androidx.compose.foundation.background
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.border
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -70,6 +77,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 
+private val overlayIn = fadeIn(tween(200)) + slideInVertically(tween(260)) { it / 14 }
+private val overlayOut = fadeOut(tween(140)) + slideOutVertically(tween(200)) { it / 14 }
+
 val Amber = Color(0xFFFF3B30) // Nothing-style signal red (name kept from the old amber)
 val PrivateBg = Color(0xFF2A2140)
 val PrivateFg = Color(0xFFB794F6)
@@ -115,7 +125,6 @@ fun BrowserScreen(
     onShowBlocked: () -> Unit,
     onResetBlocked: () -> Unit,
     onPickMedia: (MediaChoice) -> Unit,
-    onToggleDesktop: () -> Unit,
     onConfirmDownload: (PendingDownload) -> Unit,
 ) {
     val context = LocalContext.current
@@ -216,8 +225,9 @@ fun BrowserScreen(
                 Box(Modifier.fillMaxWidth().height(2.dp)) {
                     val p = tab?.progress ?: 0
                     if (p in 1..99) {
+                        val animated by animateFloatAsState(p / 100f, tween(160), label = "progress")
                         LinearProgressIndicator(
-                            progress = { p / 100f },
+                            progress = { animated },
                             modifier = Modifier.fillMaxSize(),
                             color = if (tab?.isPrivate == true) PrivateFg else Amber,
                             trackColor = Color.Transparent,
@@ -298,10 +308,9 @@ fun BrowserScreen(
                 }
             }
 
-            if (menuOpen) {
+            AnimatedVisibility(visible = menuOpen, enter = overlayIn, exit = overlayOut) {
                 MenuSheet(
                     blocked = state.blocked,
-                    desktop = tab?.desktop == true,
                     host = host,
                     blockPaused = host != null && state.settings.isPaused(host),
                     url = tab?.url,
@@ -313,7 +322,6 @@ fun BrowserScreen(
                     onNewTab = onNewTab,
                     onDownloads = onDownloads,
                     onFindVideos = onFindVideos,
-                    onToggleDesktop = onToggleDesktop,
                     onToggleBlock = {
                         if (host != null) {
                             state.settings.setPaused(host, !state.settings.isPaused(host))
@@ -326,7 +334,7 @@ fun BrowserScreen(
                 )
             }
 
-            if (state.showTabs) {
+            AnimatedVisibility(visible = state.showTabs, enter = overlayIn, exit = overlayOut) {
                 TabSwitcher(
                     state = state,
                     onSelect = onSelectTab,
@@ -336,15 +344,15 @@ fun BrowserScreen(
                 )
             }
 
-            if (state.showLibrary) {
+            AnimatedVisibility(visible = state.showLibrary, enter = overlayIn, exit = overlayOut) {
                 LibraryScreen(library, state, onOpen = { onGo(it); state.showLibrary = false }, onDismiss = { state.showLibrary = false })
             }
 
-            if (state.showDownloads) {
+            AnimatedVisibility(visible = state.showDownloads, enter = overlayIn, exit = overlayOut) {
                 DownloadsScreen(downloader, state.settings, onDismiss = { state.showDownloads = false })
             }
 
-            if (state.showSettings) {
+            AnimatedVisibility(visible = state.showSettings, enter = overlayIn, exit = overlayOut) {
                 SettingsScreen(
                     settings = state.settings,
                     onClearData = onClearData,

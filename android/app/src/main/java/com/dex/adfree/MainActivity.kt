@@ -52,8 +52,6 @@ class MainActivity : ComponentActivity() {
     private var nextTabId = 0
     private lateinit var downloader: Downloader
     private lateinit var library: Library
-    private var mobileUa = ""
-    private var desktopUa = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -118,7 +116,6 @@ class MainActivity : ComponentActivity() {
                     onShowBlocked = { showBlocked() },
                     onResetBlocked = { resetBlocked() },
                     onPickMedia = { pickMedia(it) },
-                    onToggleDesktop = { toggleDesktop() },
                     onConfirmDownload = { startDownload(it) },
                 )
             }
@@ -288,10 +285,6 @@ class MainActivity : ComponentActivity() {
                 .replace("; wv", "")
                 .replace(Regex("Version/\\d+\\.\\d+ "), "")
         }
-        // Look like Chrome, not an embedded WebView: some sites ("; wv" in the user agent) serve a broken or limited page.
-        mobileUa = wv.settings.userAgentString.replace("; wv)", ")").replace(" Version/4.0", "")
-        wv.settings.userAgentString = mobileUa
-        desktopUa = mobileUa.replace(Regex("\\(Linux; Android [^)]*\\)"), "(X11; Linux x86_64)").replace(" Mobile Safari", " Safari").replace(" Version/4.0", "")
         cookieManagerFor(tab).setAcceptThirdPartyCookies(wv, true)
         if (WebViewFeature.isFeatureSupported(WebViewFeature.SAFE_BROWSING_ENABLE)) {
             WebSettingsCompat.setSafeBrowsingEnabled(wv.settings, true)
@@ -303,8 +296,7 @@ class MainActivity : ComponentActivity() {
         // Same injection points as the extension: cosmetic CSS everywhere, YouTube scripts on YouTube,
         // all before the page's own scripts run.
         if (documentStartScripts) {
-            WebViewCompat.addDocumentStartJavaScript(wv, scripts.cosmetic, setOf("*"))
-            WebViewCompat.addDocumentStartJavaScript(wv, scripts.desktop, setOf("*"))
+            if (state.settings.hideAdBoxes) WebViewCompat.addDocumentStartJavaScript(wv, scripts.cosmetic, setOf("*"))
             WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytMain, YOUTUBE_ORIGINS)
             WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytHush, YOUTUBE_ORIGINS)
             WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytFeed, YOUTUBE_ORIGINS)
@@ -321,6 +313,7 @@ class MainActivity : ComponentActivity() {
             assetLoader = assetLoader,
             blockingEnabled = { host -> state.settings.blockAds && !state.settings.isPaused(host) },
             httpsOnly = { state.settings.httpsOnly },
+            rewrite = { u -> redditLite(u).takeIf { it != u } },
             onBlocked = { blockedHost ->
                 blockedHosts.getOrPut(blockedHost) { AtomicInteger() }.incrementAndGet()
                 // Pages block hundreds of requests; update the counter at most every 300 ms.
@@ -390,9 +383,18 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /** reddit.com to old.reddit.com when "Lighter Reddit" is on; any other URL is unchanged. */
+    private fun redditLite(url: String): String {
+        if (!state.settings.lightReddit) return url
+        val uri = Uri.parse(url)
+        val host = uri.host?.lowercase() ?: return url
+        if (host != "reddit.com" && host != "www.reddit.com" && host != "m.reddit.com" && host != "new.reddit.com") return url
+        return uri.buildUpon().authority("old.reddit.com").build().toString()
+    }
+
     /** Address-bar input to a loadable URL, applying HTTPS-only mode when it is on. */
     private fun prepare(input: String): String {
-        val url = Urls.normalize(input)
+        val url = redditLite(Urls.normalize(input))
         return if (state.settings.httpsOnly) Urls.upgrade(url) else url
     }
 
@@ -431,7 +433,7 @@ class MainActivity : ComponentActivity() {
         Toast.makeText(this, "Browsing data cleared", Toast.LENGTH_SHORT).show()
     }
 
-    // ---- Video capture and desktop mode ----
+    // ---- Video capture ----
 
     /** Lists videos the page has loaded (seen on the network) plus any in the page itself. */
     private fun findVideos() {
@@ -463,33 +465,6 @@ class MainActivity : ComponentActivity() {
             referer = tab.url,
             headers = tab.mediaHeaders[choice.url] ?: emptyMap(),
         )
-    }
-
-    private fun toggleDesktop() {
-        val tab = state.current ?: return
-        tab.desktop = !tab.desktop
-        tab.webView.settings.apply {
-            userAgentString = if (tab.desktop) desktopUa else mobileUa
-            useWideViewPort = tab.desktop
-            loadWithOverviewMode = tab.desktop
-        }
-        tab.webView.clearCache(true) // the disk cache can hold the other layout, since many sites don't vary by user agent
-        val target = if (tab.desktop) desktopUrl(tab.url) else tab.url
-        if (target.isBlank() || Urls.isHome(target)) tab.webView.reload() else tab.webView.loadUrl(target)
-    }
-
-    /** m.example.com / mobile.example.com / en.m.example.com to the desktop address; other URLs are unchanged. */
-    private fun desktopUrl(url: String): String {
-        val uri = Uri.parse(url)
-        val host = uri.host ?: return url
-        val desktop = when {
-            host.startsWith("m.") -> host.removePrefix("m.")
-            host.startsWith("mobile.") -> host.removePrefix("mobile.")
-            host.contains(".m.") -> host.replaceFirst(".m.", ".")
-            else -> return url
-        }
-        val authority = if (uri.port != -1) "$desktop:${uri.port}" else desktop
-        return uri.buildUpon().authority(authority).build().toString()
     }
 
     // ---- Downloads ----

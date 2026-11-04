@@ -7,7 +7,12 @@ import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -35,7 +40,6 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
@@ -63,7 +67,6 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun MenuSheet(
     blocked: Int,
-    desktop: Boolean,
     host: String?,
     blockPaused: Boolean,
     url: String?,
@@ -75,7 +78,6 @@ fun MenuSheet(
     onNewTab: (Boolean) -> Unit,
     onDownloads: () -> Unit,
     onFindVideos: () -> Unit,
-    onToggleDesktop: () -> Unit,
     onToggleBlock: () -> Unit,
     onReload: () -> Unit,
     onSettings: () -> Unit,
@@ -120,7 +122,7 @@ fun MenuSheet(
                     Cell(Icons.Default.Add, "New tab", Modifier.weight(1f), onClick = act { onNewTab(false) })
                     Cell(Icons.Default.ArrowDropDown, "Downloads", Modifier.weight(1f), onClick = act(onDownloads))
                     Cell(Icons.Default.PlayArrow, "Video", Modifier.weight(1f), onClick = act(onFindVideos))
-                    Cell(Icons.Default.Phone, if (desktop) "Mobile" else "Desktop", Modifier.weight(1f), active = desktop, onClick = act(onToggleDesktop))
+                    Cell(Icons.Default.Refresh, "Reload", Modifier.weight(1f), onClick = act(onReload))
                     Cell(
                         Icons.Default.Check, if (blockPaused) "Block off" else "Block on", Modifier.weight(1f),
                         active = host != null && !blockPaused, enabled = host != null, onClick = act(onToggleBlock),
@@ -156,11 +158,15 @@ private fun Pill(onClick: () -> Unit, content: @Composable () -> Unit) {
 
 @Composable
 private fun Cell(icon: ImageVector, label: String, modifier: Modifier, active: Boolean = false, enabled: Boolean = true, onClick: () -> Unit) {
+    val source = remember { MutableInteractionSource() }
+    val pressed by source.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) 0.88f else 1f, spring(dampingRatio = 0.5f, stiffness = 600f), label = "press")
     Column(
         modifier
             .alpha(if (enabled) 1f else 0.35f)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(RoundedCornerShape(16.dp))
-            .clickable(enabled = enabled, onClick = onClick)
+            .clickable(interactionSource = source, indication = null, enabled = enabled, onClick = onClick)
             .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

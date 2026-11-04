@@ -21,6 +21,7 @@ class AdFreeWebViewClient(
     private val assetLoader: WebViewAssetLoader,
     private val blockingEnabled: (String?) -> Boolean,
     private val httpsOnly: () -> Boolean,
+    private val rewrite: (String) -> String?,
     private val onBlocked: (String) -> Unit,
     private val onMedia: (String, Map<String, String>) -> Unit,
     private val onStarted: (WebView, String) -> Unit,
@@ -55,7 +56,11 @@ class AdFreeWebViewClient(
                     false
                 }
             }
-            "https", "about", "data", "blob" -> false
+            "https" -> {
+                val to = if (request.isForMainFrame) rewrite(uri.toString()) else null
+                if (to != null) { view?.loadUrl(to); true } else false
+            }
+            "about", "data", "blob" -> false
             "mailto", "tel", "sms" -> {
                 try {
                     view?.context?.startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
