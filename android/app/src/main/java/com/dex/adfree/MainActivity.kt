@@ -72,6 +72,12 @@ class MainActivity : ComponentActivity() {
         deleteLeftoverPrivateProfiles()
         downloader = Downloader(this, state.settings)
         library = Library(this)
+        PlaybackBridge.evaluate = { code, callback ->
+            runOnUiThread {
+                val tab = state.tabs.firstOrNull { Uri.parse(it.url).host?.contains("youtube.com") == true } ?: state.current
+                tab?.webView?.evaluateJavascript(code) { callback(it ?: "null") }
+            }
+        }
         if (android.os.Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission("android.permission.POST_NOTIFICATIONS") != android.content.pm.PackageManager.PERMISSION_GRANTED
         ) requestPermissions(arrayOf("android.permission.POST_NOTIFICATIONS"), 1)
@@ -170,6 +176,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onDestroy() {
+        PlaybackBridge.evaluate = null
         state.tabs.toList().forEach { destroyTab(it) }
         super.onDestroy()
     }
@@ -284,6 +291,10 @@ class MainActivity : ComponentActivity() {
             userAgentString = userAgentString
                 .replace("; wv", "")
                 .replace(Regex("Version/\\d+\\.\\d+ "), "")
+        }
+        // Do not announce this app to websites with an X-Requested-With header (Google refuses sign-in when it sees it).
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.REQUESTED_WITH_HEADER_ALLOW_LIST)) {
+            WebSettingsCompat.setRequestedWithHeaderOriginAllowList(wv.settings, emptySet())
         }
         cookieManagerFor(tab).setAcceptThirdPartyCookies(wv, true)
         if (WebViewFeature.isFeatureSupported(WebViewFeature.SAFE_BROWSING_ENABLE)) {
