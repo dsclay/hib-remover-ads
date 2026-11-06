@@ -66,6 +66,18 @@ fun SettingsScreen(
                 onChange = settings::updateHideAdBoxes,
             )
             SwitchRow(
+                title = "SponsorBlock",
+                subtitle = "Skips sponsor and self-promo parts of YouTube videos. Applies to new tabs.",
+                checked = settings.sponsorBlock,
+                onChange = settings::updateSponsorBlock,
+            )
+            SwitchRow(
+                title = "Remember video speed",
+                subtitle = "Keeps your YouTube speed and adds a speed button on videos. Applies to new tabs.",
+                checked = settings.keepSpeed,
+                onChange = settings::updateKeepSpeed,
+            )
+            SwitchRow(
                 title = "Lighter Reddit",
                 subtitle = "Opens Reddit as old.reddit.com. Plainer, but fast and doesn't freeze.",
                 checked = settings.lightReddit,

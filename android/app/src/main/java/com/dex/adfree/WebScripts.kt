@@ -19,6 +19,9 @@ class WebScripts(context: Context) {
     /** Removes sponsored items from YouTube feeds and Shorts. */
     val ytFeed: String = read(context, "scripts/yt-feed.js")
 
+    /** SponsorBlock and remembered playback speed on YouTube. */
+    val ytExtras: String = read(context, "scripts/yt-extras.js")
+
     /** Lazy-loads off-screen images and frames. */
     val perf: String = read(context, "scripts/perf.js")
 

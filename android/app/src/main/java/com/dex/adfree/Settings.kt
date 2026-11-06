@@ -34,6 +34,24 @@ class Settings(context: Context) {
         prefs.edit().putBoolean(KEY_BOXES, value).apply()
     }
 
+    /** Skips sponsor segments in YouTube videos (SponsorBlock data). */
+    var sponsorBlock by mutableStateOf(prefs.getBoolean(KEY_SB, true))
+        private set
+
+    fun updateSponsorBlock(value: Boolean) {
+        sponsorBlock = value
+        prefs.edit().putBoolean(KEY_SB, value).apply()
+    }
+
+    /** Remembers the YouTube playback speed and shows a speed button on videos. */
+    var keepSpeed by mutableStateOf(prefs.getBoolean(KEY_SPEED, true))
+        private set
+
+    fun updateKeepSpeed(value: Boolean) {
+        keepSpeed = value
+        prefs.edit().putBoolean(KEY_SPEED, value).apply()
+    }
+
     /** Opens reddit.com pages as old.reddit.com, which is much lighter. */
     var lightReddit by mutableStateOf(prefs.getBoolean(KEY_REDDIT, false))
         private set
@@ -77,6 +95,8 @@ class Settings(context: Context) {
         const val KEY_HTTPS = "httpsOnly"
         const val KEY_BOOST = "boostDownloads"
         const val KEY_BOXES = "hideAdBoxes"
+        const val KEY_SB = "sponsorBlock"
+        const val KEY_SPEED = "keepSpeed"
         const val KEY_REDDIT = "lightReddit"
         const val KEY_FAST = "fasterLoading"
         const val KEY_PAUSED = "pausedHosts"

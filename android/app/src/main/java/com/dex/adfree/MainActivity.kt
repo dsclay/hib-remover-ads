@@ -312,6 +312,7 @@ class MainActivity : ComponentActivity() {
             WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytHush, YOUTUBE_ORIGINS)
             WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytFeed, YOUTUBE_ORIGINS)
             WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytBackground, YOUTUBE_ORIGINS)
+            WebViewCompat.addDocumentStartJavaScript(wv, extrasConfig() + scripts.ytExtras, YOUTUBE_ORIGINS)
             if (state.settings.fasterLoading) WebViewCompat.addDocumentStartJavaScript(wv, scripts.perf, setOf("*"))
         }
 
@@ -391,8 +392,12 @@ class MainActivity : ComponentActivity() {
             view.evaluateJavascript(scripts.ytMain, null)
             view.evaluateJavascript(scripts.ytHush, null)
             view.evaluateJavascript(scripts.ytFeed, null)
+            view.evaluateJavascript(extrasConfig() + scripts.ytExtras, null)
         }
     }
+
+    private fun extrasConfig(): String =
+        "window.__hhCfg={sb:${state.settings.sponsorBlock},speed:${state.settings.keepSpeed}};"
 
     /** reddit.com to old.reddit.com when "Lighter Reddit" is on; any other URL is unchanged. */
     private fun redditLite(url: String): String {
