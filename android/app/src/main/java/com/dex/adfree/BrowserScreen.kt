@@ -152,75 +152,6 @@ fun BrowserScreen(
                     .fillMaxSize()
                     .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.ime)),
             ) {
-                // Address pill
-                Surface(
-                    shape = RoundedCornerShape(50),
-                    color = if (tab?.isPrivate == true) PrivateBg.copy(alpha = 0.8f) else GlassFill,
-                    border = glassBorder(),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                        .height(44.dp),
-                ) {
-                    Row(
-                        Modifier.padding(horizontal = 18.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        if (tab?.isPrivate == true) {
-                            Text(
-                                "Private",
-                                color = PrivateFg,
-                                style = MaterialTheme.typography.labelMedium,
-                                modifier = Modifier.padding(end = 10.dp),
-                            )
-                        }
-                        if (tab?.url?.startsWith("http://") == true) {
-                            Text(
-                                "Not secure",
-                                color = colors.error,
-                                style = MaterialTheme.typography.labelMedium,
-                                modifier = Modifier.padding(end = 10.dp),
-                            )
-                        }
-                        BasicTextField(
-                            value = field,
-                            onValueChange = { field = it },
-                            singleLine = true,
-                            textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.onSurface),
-                            cursorBrush = SolidColor(Amber),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
-                            keyboardActions = KeyboardActions(onGo = {
-                                focus.clearFocus()
-                                onGo(field.text)
-                            }),
-                            modifier = Modifier
-                                .weight(1f)
-                                .onFocusChanged {
-                                    editing = it.isFocused
-                                    if (it.isFocused) {
-                                        val full = tab?.url.orEmpty().takeUnless { Urls.isHome(it) }.orEmpty()
-                                        field = TextFieldValue(full, TextRange(0, full.length))
-                                    }
-                                },
-                        )
-                        if (editing) {
-                            Text(
-                                "Paste",
-                                color = Amber,
-                                style = MaterialTheme.typography.labelLarge,
-                                modifier = Modifier
-                                    .padding(start = 12.dp)
-                                    .clickable {
-                                        clipboard.getText()?.text?.takeIf { it.isNotBlank() }?.let {
-                                            focus.clearFocus()
-                                            onGo(it)
-                                        }
-                                    },
-                            )
-                        }
-                    }
-                }
-
                 // Thin progress line (always reserves its height so the page doesn't jump)
                 Box(Modifier.fillMaxWidth().height(2.dp)) {
                     val p = tab?.progress ?: 0
@@ -258,50 +189,121 @@ fun BrowserScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                 ) {
-                    Row(
-                        Modifier.padding(horizontal = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                    Column {
+                    // Address pill
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = if (tab?.isPrivate == true) PrivateBg.copy(alpha = 0.8f) else Color.White.copy(alpha = 0.08f),
+                        border = glassBorder(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 10.dp, end = 10.dp, top = 8.dp)
+                            .height(42.dp),
                     ) {
-                        IconButton(onClick = onBack, enabled = tab?.canGoBack == true) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                        }
-                        IconButton(onClick = onForward, enabled = tab?.canGoForward == true) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Forward")
-                        }
-                        IconButton(onClick = onReload) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Reload")
-                        }
-                        Spacer(Modifier.weight(1f))
-                        Text(
-                            "${state.blocked}",
-                            style = MaterialTheme.typography.labelMedium.copy(fontFamily = Dot, fontSize = 18.sp),
-                            color = Amber,
-                            modifier = Modifier
-                                .clip(CircleShape)
-                                .clickable { onShowBlocked() }
-                                .background(Amber.copy(alpha = 0.14f))
-                                .padding(horizontal = 12.dp, vertical = 6.dp),
-                        )
-                        // Tab count button
-                        Box(
-                            Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .clickable { state.showTabs = true },
-                            contentAlignment = Alignment.Center,
+                        Row(
+                            Modifier.padding(horizontal = 18.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Box(
-                                Modifier
-                                    .size(24.dp)
-                                    .border(2.dp, colors.onSurface, RoundedCornerShape(7.dp)),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text("${state.tabs.size}", style = MaterialTheme.typography.labelSmall)
+                            if (tab?.isPrivate == true) {
+                                Text(
+                                    "Private",
+                                    color = PrivateFg,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    modifier = Modifier.padding(end = 10.dp),
+                                )
+                            }
+                            if (tab?.url?.startsWith("http://") == true) {
+                                Text(
+                                    "Not secure",
+                                    color = colors.error,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    modifier = Modifier.padding(end = 10.dp),
+                                )
+                            }
+                            BasicTextField(
+                                value = field,
+                                onValueChange = { field = it },
+                                singleLine = true,
+                                textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.onSurface),
+                                cursorBrush = SolidColor(Amber),
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
+                                keyboardActions = KeyboardActions(onGo = {
+                                    focus.clearFocus()
+                                    onGo(field.text)
+                                }),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .onFocusChanged {
+                                        editing = it.isFocused
+                                        if (it.isFocused) {
+                                            val full = tab?.url.orEmpty().takeUnless { Urls.isHome(it) }.orEmpty()
+                                            field = TextFieldValue(full, TextRange(0, full.length))
+                                        }
+                                    },
+                            )
+                            if (editing) {
+                                Text(
+                                    "Paste",
+                                    color = Amber,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    modifier = Modifier
+                                        .padding(start = 12.dp)
+                                        .clickable {
+                                            clipboard.getText()?.text?.takeIf { it.isNotBlank() }?.let {
+                                                focus.clearFocus()
+                                                onGo(it)
+                                            }
+                                        },
+                                )
                             }
                         }
-                        Box {
-                            IconButton(onClick = { menuOpen = true }) {
-                                Icon(Icons.Default.MoreVert, contentDescription = "Menu")
+                    }
+
+                        Row(
+                            Modifier.padding(horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            IconButton(onClick = onBack, enabled = tab?.canGoBack == true) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            }
+                            IconButton(onClick = onForward, enabled = tab?.canGoForward == true) {
+                                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Forward")
+                            }
+                            IconButton(onClick = onReload) {
+                                Icon(Icons.Default.Refresh, contentDescription = "Reload")
+                            }
+                            Spacer(Modifier.weight(1f))
+                            Text(
+                                "${state.blocked}",
+                                style = MaterialTheme.typography.labelMedium.copy(fontFamily = Dot, fontSize = 18.sp),
+                                color = Amber,
+                                modifier = Modifier
+                                    .clip(CircleShape)
+                                    .clickable { onShowBlocked() }
+                                    .background(Amber.copy(alpha = 0.14f))
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                            )
+                            // Tab count button
+                            Box(
+                                Modifier
+                                    .size(48.dp)
+                                    .clip(CircleShape)
+                                    .clickable { state.showTabs = true },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Box(
+                                    Modifier
+                                        .size(24.dp)
+                                        .border(2.dp, colors.onSurface, RoundedCornerShape(7.dp)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Text("${state.tabs.size}", style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                            Box {
+                                IconButton(onClick = { menuOpen = true }) {
+                                    Icon(Icons.Default.MoreVert, contentDescription = "Menu")
+                                }
                             }
                         }
                     }
