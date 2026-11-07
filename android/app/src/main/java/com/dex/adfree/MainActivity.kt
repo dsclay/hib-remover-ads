@@ -521,6 +521,10 @@ class MainActivity : ComponentActivity() {
         customViewCallback = null
         callback?.onCustomViewHidden()
         WindowInsetsControllerCompat(window, window.decorView).show(WindowInsetsCompat.Type.systemBars())
+        // Ask the page to lay itself out again once the bars are back.
+        window.decorView.postDelayed({
+            state.current?.webView?.evaluateJavascript("window.dispatchEvent(new Event('resize'))", null)
+        }, 350)
     }
 
     private companion object {
