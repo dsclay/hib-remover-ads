@@ -52,6 +52,15 @@ class Settings(context: Context) {
         prefs.edit().putBoolean(KEY_SPEED, value).apply()
     }
 
+    /** Slides the bottom bar away a few seconds after the last touch. */
+    var autoHideBar by mutableStateOf(prefs.getBoolean(KEY_HIDEBAR, true))
+        private set
+
+    fun updateAutoHideBar(value: Boolean) {
+        autoHideBar = value
+        prefs.edit().putBoolean(KEY_HIDEBAR, value).apply()
+    }
+
     /** Opens reddit.com pages as old.reddit.com, which is much lighter. */
     var lightReddit by mutableStateOf(prefs.getBoolean(KEY_REDDIT, false))
         private set
@@ -96,6 +105,7 @@ class Settings(context: Context) {
         const val KEY_BOOST = "boostDownloads"
         const val KEY_BOXES = "hideAdBoxes"
         const val KEY_SB = "sponsorBlock"
+        const val KEY_HIDEBAR = "autoHideBar"
         const val KEY_SPEED = "keepSpeed"
         const val KEY_REDDIT = "lightReddit"
         const val KEY_FAST = "fasterLoading"

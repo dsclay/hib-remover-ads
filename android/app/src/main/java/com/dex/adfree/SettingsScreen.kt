@@ -66,6 +66,12 @@ fun SettingsScreen(
                 onChange = settings::updateHideAdBoxes,
             )
             SwitchRow(
+                title = "Auto-hide bottom bar",
+                subtitle = "Slides the bar away after a few seconds. Tap the handle at the bottom to bring it back.",
+                checked = settings.autoHideBar,
+                onChange = settings::updateAutoHideBar,
+            )
+            SwitchRow(
                 title = "SponsorBlock",
                 subtitle = "Skips sponsor and self-promo parts of YouTube videos. Applies to new tabs.",
                 checked = settings.sponsorBlock,
