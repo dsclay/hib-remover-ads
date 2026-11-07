@@ -75,6 +75,30 @@
     }
     pill.style.display = show ? '' : 'none';
   }
+  // The content under the player was laid out for the old, smaller player: move it down by however much it is covered.
+  var shifted = [];
+  function resetShift() {
+    for (var i = 0; i < shifted.length; i++) shifted[i].style.removeProperty('margin-top');
+    shifted = [];
+  }
+  function pushContent(p) {
+    var bottom = p.getBoundingClientRect().bottom, el = p;
+    for (var n = 0; el && el !== document.body && n < 8; n++, el = el.parentElement) {
+      var sib = el.nextElementSibling;
+      if (!sib || !sib.offsetHeight) continue;
+      var pos = getComputedStyle(sib).position;
+      if (pos === 'fixed' || pos === 'absolute') continue;
+      var r = sib.getBoundingClientRect();
+      var overlap = bottom - r.top;
+      if (overlap > 2 && r.bottom > bottom) {
+        var cur = parseFloat(getComputedStyle(sib).marginTop) || 0;
+        sib.style.setProperty('margin-top', Math.round(cur + overlap) + 'px', 'important');
+        if (shifted.indexOf(sib) < 0) shifted.push(sib);
+        return;
+      }
+      if (overlap <= 2) return; // nothing covered at this level
+    }
+  }
   // Make the watch-page player a full-width 16:9 box, as in the YouTube app (it is sometimes left small).
   function fitPlayer(v) {
     try {
@@ -93,11 +117,12 @@
       v.style.setProperty('height', H + 'px', 'important');
       v.style.setProperty('left', '0px', 'important');
       v.style.setProperty('top', '0px', 'important');
+      pushContent(p || v);
     } catch (e) {}
   }
   function tick() {
     var id = currentId();
-    if (id !== videoId) { videoId = id; loadSegments(id); }
+    if (id !== videoId) { videoId = id; loadSegments(id); resetShift(); }
     var v = document.querySelector('video');
     ensurePill();
     if (!v) return;
