@@ -52,9 +52,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -148,26 +145,12 @@ fun BrowserScreen(
     val overlayOpen = state.showSettings || state.showTabs || state.showDownloads || state.blockedReport != null ||
         state.mediaChoices != null || state.pendingDownload != null || state.showLibrary
 
-    // Keep the page the same size while a video is fullscreen: hiding the system bars would otherwise resize
-    // the WebView, and YouTube leaves a black gap under the video when it returns.
-    val insets = WindowInsets.systemBars.union(WindowInsets.ime)
-    val density = LocalDensity.current
-    val dir = LocalLayoutDirection.current
-    val now = listOf(insets.getLeft(density, dir), insets.getTop(density), insets.getRight(density, dir), insets.getBottom(density))
-    var held by remember { mutableStateOf(now) }
-    SideEffect { if (state.customView == null) held = now }
-    val used = if (state.customView == null) now else held
-    val padL = with(density) { used[0].toDp() }
-    val padT = with(density) { used[1].toDp() }
-    val padR = with(density) { used[2].toDp() }
-    val padB = with(density) { used[3].toDp() }
-
     Surface(modifier = Modifier.fillMaxSize(), color = colors.background) {
         Box(Modifier.fillMaxSize()) {
             Column(
                 Modifier
                     .fillMaxSize()
-                    .padding(start = padL, top = padT, end = padR, bottom = padB),
+                    .windowInsetsPadding(WindowInsets.systemBars.union(WindowInsets.ime)),
             ) {
                 // Thin progress line (always reserves its height so the page doesn't jump)
                 Box(Modifier.fillMaxWidth().height(2.dp)) {
