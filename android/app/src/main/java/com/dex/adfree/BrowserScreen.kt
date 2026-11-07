@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -136,6 +137,7 @@ fun BrowserScreen(
     var field by remember { mutableStateOf(TextFieldValue("")) }
     var editing by remember { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
+    var barShown by remember { mutableStateOf(true) }
 
     // Follow the page (and the selected tab) unless the user is typing.
     LaunchedEffect(tab?.id, tab?.url, editing) {
@@ -144,6 +146,15 @@ fun BrowserScreen(
 
     val overlayOpen = state.showSettings || state.showTabs || state.showDownloads || state.blockedReport != null ||
         state.mediaChoices != null || state.pendingDownload != null || state.showLibrary
+
+    // Show the bar on a new page, while typing or with a panel open; otherwise hide it after a few seconds.
+    LaunchedEffect(tab?.id, tab?.url, editing, menuOpen, overlayOpen, barShown) {
+        if (editing || menuOpen || overlayOpen) { barShown = true; return@LaunchedEffect }
+        if (barShown && state.settings.autoHideBar) {
+            kotlinx.coroutines.delay(4000)
+            barShown = false
+        }
+    }
 
     Surface(modifier = Modifier.fillMaxSize(), color = colors.background) {
         Box(Modifier.fillMaxSize()) {
@@ -180,132 +191,149 @@ fun BrowserScreen(
                     Spacer(Modifier.weight(1f))
                 }
 
-                // Floating bottom bar
-                Surface(
-                    shape = RoundedCornerShape(28.dp),
-                    color = GlassFill,
-                    border = glassBorder(),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                // Floating bottom bar: slides away a few seconds after the last touch (when auto-hide is on)
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = barShown || !state.settings.autoHideBar,
+                    enter = androidx.compose.animation.slideInVertically { it } + androidx.compose.animation.fadeIn(),
+                    exit = androidx.compose.animation.slideOutVertically { it } + androidx.compose.animation.fadeOut(),
                 ) {
-                    Column {
-                    // Address pill
                     Surface(
-                        shape = RoundedCornerShape(50),
-                        color = if (tab?.isPrivate == true) PrivateBg.copy(alpha = 0.8f) else Color.White.copy(alpha = 0.08f),
+                        shape = RoundedCornerShape(28.dp),
+                        color = GlassFill,
                         border = glassBorder(),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 10.dp, end = 10.dp, top = 8.dp)
-                            .height(42.dp),
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
                     ) {
-                        Row(
-                            Modifier.padding(horizontal = 18.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                        Column {
+                        // Address pill
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = if (tab?.isPrivate == true) PrivateBg.copy(alpha = 0.8f) else Color.White.copy(alpha = 0.08f),
+                            border = glassBorder(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 10.dp, end = 10.dp, top = 8.dp)
+                                .height(42.dp),
                         ) {
-                            if (tab?.isPrivate == true) {
-                                Text(
-                                    "Private",
-                                    color = PrivateFg,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    modifier = Modifier.padding(end = 10.dp),
-                                )
-                            }
-                            if (tab?.url?.startsWith("http://") == true) {
-                                Text(
-                                    "Not secure",
-                                    color = colors.error,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    modifier = Modifier.padding(end = 10.dp),
-                                )
-                            }
-                            BasicTextField(
-                                value = field,
-                                onValueChange = { field = it },
-                                singleLine = true,
-                                textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.onSurface),
-                                cursorBrush = SolidColor(Amber),
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
-                                keyboardActions = KeyboardActions(onGo = {
-                                    focus.clearFocus()
-                                    onGo(field.text)
-                                }),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .onFocusChanged {
-                                        editing = it.isFocused
-                                        if (it.isFocused) {
-                                            val full = tab?.url.orEmpty().takeUnless { Urls.isHome(it) }.orEmpty()
-                                            field = TextFieldValue(full, TextRange(0, full.length))
-                                        }
-                                    },
-                            )
-                            if (editing) {
-                                Text(
-                                    "Paste",
-                                    color = Amber,
-                                    style = MaterialTheme.typography.labelLarge,
+                            Row(
+                                Modifier.padding(horizontal = 18.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                if (tab?.isPrivate == true) {
+                                    Text(
+                                        "Private",
+                                        color = PrivateFg,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        modifier = Modifier.padding(end = 10.dp),
+                                    )
+                                }
+                                if (tab?.url?.startsWith("http://") == true) {
+                                    Text(
+                                        "Not secure",
+                                        color = colors.error,
+                                        style = MaterialTheme.typography.labelMedium,
+                                        modifier = Modifier.padding(end = 10.dp),
+                                    )
+                                }
+                                BasicTextField(
+                                    value = field,
+                                    onValueChange = { field = it },
+                                    singleLine = true,
+                                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.onSurface),
+                                    cursorBrush = SolidColor(Amber),
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
+                                    keyboardActions = KeyboardActions(onGo = {
+                                        focus.clearFocus()
+                                        onGo(field.text)
+                                    }),
                                     modifier = Modifier
-                                        .padding(start = 12.dp)
-                                        .clickable {
-                                            clipboard.getText()?.text?.takeIf { it.isNotBlank() }?.let {
-                                                focus.clearFocus()
-                                                onGo(it)
+                                        .weight(1f)
+                                        .onFocusChanged {
+                                            editing = it.isFocused
+                                            if (it.isFocused) {
+                                                val full = tab?.url.orEmpty().takeUnless { Urls.isHome(it) }.orEmpty()
+                                                field = TextFieldValue(full, TextRange(0, full.length))
                                             }
                                         },
                                 )
+                                if (editing) {
+                                    Text(
+                                        "Paste",
+                                        color = Amber,
+                                        style = MaterialTheme.typography.labelLarge,
+                                        modifier = Modifier
+                                            .padding(start = 12.dp)
+                                            .clickable {
+                                                clipboard.getText()?.text?.takeIf { it.isNotBlank() }?.let {
+                                                    focus.clearFocus()
+                                                    onGo(it)
+                                                }
+                                            },
+                                    )
+                                }
+                            }
+                        }
+
+                            Row(
+                                Modifier.padding(horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                IconButton(onClick = onBack, enabled = tab?.canGoBack == true) {
+                                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                                }
+                                IconButton(onClick = onForward, enabled = tab?.canGoForward == true) {
+                                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Forward")
+                                }
+                                IconButton(onClick = onReload) {
+                                    Icon(Icons.Default.Refresh, contentDescription = "Reload")
+                                }
+                                Spacer(Modifier.weight(1f))
+                                Text(
+                                    "${state.blocked}",
+                                    style = MaterialTheme.typography.labelMedium.copy(fontFamily = Dot, fontSize = 18.sp),
+                                    color = Amber,
+                                    modifier = Modifier
+                                        .clip(CircleShape)
+                                        .clickable { onShowBlocked() }
+                                        .background(Amber.copy(alpha = 0.14f))
+                                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                                )
+                                // Tab count button
+                                Box(
+                                    Modifier
+                                        .size(48.dp)
+                                        .clip(CircleShape)
+                                        .clickable { state.showTabs = true },
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Box(
+                                        Modifier
+                                            .size(24.dp)
+                                            .border(2.dp, colors.onSurface, RoundedCornerShape(7.dp)),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Text("${state.tabs.size}", style = MaterialTheme.typography.labelSmall)
+                                    }
+                                }
+                                Box {
+                                    IconButton(onClick = { menuOpen = true }) {
+                                        Icon(Icons.Default.MoreVert, contentDescription = "Menu")
+                                    }
+                                }
                             }
                         }
                     }
-
-                        Row(
-                            Modifier.padding(horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            IconButton(onClick = onBack, enabled = tab?.canGoBack == true) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                            }
-                            IconButton(onClick = onForward, enabled = tab?.canGoForward == true) {
-                                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Forward")
-                            }
-                            IconButton(onClick = onReload) {
-                                Icon(Icons.Default.Refresh, contentDescription = "Reload")
-                            }
-                            Spacer(Modifier.weight(1f))
-                            Text(
-                                "${state.blocked}",
-                                style = MaterialTheme.typography.labelMedium.copy(fontFamily = Dot, fontSize = 18.sp),
-                                color = Amber,
-                                modifier = Modifier
-                                    .clip(CircleShape)
-                                    .clickable { onShowBlocked() }
-                                    .background(Amber.copy(alpha = 0.14f))
-                                    .padding(horizontal = 12.dp, vertical = 6.dp),
-                            )
-                            // Tab count button
-                            Box(
-                                Modifier
-                                    .size(48.dp)
-                                    .clip(CircleShape)
-                                    .clickable { state.showTabs = true },
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Box(
-                                    Modifier
-                                        .size(24.dp)
-                                        .border(2.dp, colors.onSurface, RoundedCornerShape(7.dp)),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Text("${state.tabs.size}", style = MaterialTheme.typography.labelSmall)
-                                }
-                            }
-                            Box {
-                                IconButton(onClick = { menuOpen = true }) {
-                                    Icon(Icons.Default.MoreVert, contentDescription = "Menu")
-                                }
-                            }
-                        }
+                }
+                if (!barShown && state.settings.autoHideBar) {
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(26.dp)
+                            .clickable { barShown = true },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Box(Modifier.width(56.dp).height(5.dp).clip(CircleShape).background(colors.onSurface.copy(alpha = 0.45f)))
                     }
                 }
             }

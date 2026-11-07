@@ -397,7 +397,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun extrasConfig(): String =
-        "window.__hhCfg={sb:${state.settings.sponsorBlock},speed:false};"
+        "window.__hhCfg={sb:${state.settings.sponsorBlock},speed:${state.settings.keepSpeed}};"
 
     /** reddit.com to old.reddit.com when "Lighter Reddit" is on; any other URL is unchanged. */
     private fun redditLite(url: String): String {
@@ -508,7 +508,6 @@ class MainActivity : ComponentActivity() {
         customViewCallback?.onCustomViewHidden()
         customViewCallback = callback
         state.customView = view
-        state.current?.webView?.evaluateJavascript(CLEAR_PLAYER_JS, null)
         WindowInsetsControllerCompat(window, window.decorView).apply {
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             hide(WindowInsetsCompat.Type.systemBars())
@@ -522,24 +521,10 @@ class MainActivity : ComponentActivity() {
         customViewCallback = null
         callback?.onCustomViewHidden()
         WindowInsetsControllerCompat(window, window.decorView).show(WindowInsetsCompat.Type.systemBars())
-        // YouTube can keep the fullscreen height after rotating back: nudge it and, if it is still stale, size the player box.
-        val tab = state.current
-        for (delay in longArrayOf(300, 900, 1800, 3000)) {
-            window.decorView.postDelayed({ tab?.webView?.evaluateJavascript(FIX_PLAYER_JS, null) }, delay)
-        }
     }
 
     private companion object {
         const val PRIVATE_PREFIX = "private_"
-        const val CLEAR_PLAYER_JS =
-            "(function(){var a=window.__hhFixed||[];for(var i=0;i<a.length;i++)a[i].style.removeProperty('height');window.__hhFixed=[]})()"
-        const val FIX_PLAYER_JS =
-            "(function(){try{window.dispatchEvent(new Event('resize'));if(document.fullscreenElement)return;" +
-                "var v=document.querySelector('video');if(!v||location.pathname!=='/watch')return;" +
-                "var W=window.innerWidth;if(W>window.innerHeight||!v.videoWidth||v.videoHeight>v.videoWidth)return;" +
-                "var H=Math.round(W*v.videoHeight/v.videoWidth);var p=v.closest('.html5-video-player')||v.parentElement;" +
-                "if(!p||p.offsetHeight<=H*1.25)return;var ph=p.offsetHeight,el=p,n=0;window.__hhFixed=window.__hhFixed||[];" +
-                "while(el&&el!==document.body&&n++<4){if(Math.abs(el.offsetHeight-ph)<=4){el.style.setProperty('height',H+'px','important');window.__hhFixed.push(el)}el=el.parentElement}}catch(e){}})()"
         val REPLAY_HEADERS = setOf("referer", "origin", "user-agent", "accept-language")
         const val FIND_MEDIA_JS =
             "(function(){var o=[];document.querySelectorAll('video,video source,audio,audio source').forEach(function(e){" +

@@ -75,59 +75,13 @@
     }
     pill.style.display = show ? '' : 'none';
   }
-  // The content under the player was laid out for the old, smaller player: move it down by however much it is covered.
-  var shifted = [];
-  function resetShift() {
-    for (var i = 0; i < shifted.length; i++) shifted[i].style.removeProperty('margin-top');
-    shifted = [];
-  }
-  function pushContent(p) {
-    var bottom = p.getBoundingClientRect().bottom, el = p;
-    for (var n = 0; el && el !== document.body && n < 8; n++, el = el.parentElement) {
-      var sib = el.nextElementSibling;
-      if (!sib || !sib.offsetHeight) continue;
-      var pos = getComputedStyle(sib).position;
-      if (pos === 'fixed' || pos === 'absolute') continue;
-      var r = sib.getBoundingClientRect();
-      var overlap = bottom - r.top;
-      if (overlap > 2 && r.bottom > bottom) {
-        var cur = parseFloat(getComputedStyle(sib).marginTop) || 0;
-        sib.style.setProperty('margin-top', Math.round(cur + overlap) + 'px', 'important');
-        if (shifted.indexOf(sib) < 0) shifted.push(sib);
-        return;
-      }
-      if (overlap <= 2) return; // nothing covered at this level
-    }
-  }
-  // Make the watch-page player a full-width 16:9 box, as in the YouTube app (it is sometimes left small).
-  function fitPlayer(v) {
-    try {
-      if (location.pathname !== '/watch' || document.fullscreenElement) return;
-      var vw = v.videoWidth, vh = v.videoHeight;
-      if (!vw || !vh || vh > vw) return; // portrait videos keep YouTube's own layout
-      var W = window.innerWidth, H = Math.round(W * vh / vw);
-      if (H > window.innerHeight * 0.62) H = Math.round(window.innerHeight * 0.62);
-      var p = v.closest('.html5-video-player') || v.parentElement;
-      var el = p, n = 0;
-      while (el && el !== document.body && n++ < 4) {
-        if (el.offsetWidth >= W - 4 && Math.abs(el.offsetHeight - H) > 3) el.style.setProperty('height', H + 'px', 'important');
-        el = el.parentElement;
-      }
-      v.style.setProperty('width', W + 'px', 'important');
-      v.style.setProperty('height', H + 'px', 'important');
-      v.style.setProperty('left', '0px', 'important');
-      v.style.setProperty('top', '0px', 'important');
-      pushContent(p || v);
-    } catch (e) {}
-  }
   function tick() {
     var id = currentId();
-    if (id !== videoId) { videoId = id; loadSegments(id); resetShift(); }
+    if (id !== videoId) { videoId = id; loadSegments(id); }
     var v = document.querySelector('video');
     ensurePill();
     if (!v) return;
     hook(v);
-    fitPlayer(v);
     if (cfg.speed) applySpeed(v);
     if (!segs.length || v.paused && v.currentTime < 0.1) return;
     var t = v.currentTime;
