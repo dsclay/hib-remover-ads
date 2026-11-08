@@ -308,10 +308,12 @@ class MainActivity : ComponentActivity() {
         // all before the page's own scripts run.
         if (documentStartScripts) {
             if (state.settings.hideAdBoxes) WebViewCompat.addDocumentStartJavaScript(wv, scripts.cosmetic, setOf("*"))
-            WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytMain, YOUTUBE_ORIGINS)
-            WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytHush, YOUTUBE_ORIGINS)
-            WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytFeed, YOUTUBE_ORIGINS)
-            WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytBackground, YOUTUBE_ORIGINS)
+            if (state.settings.ytPlayerAds) {
+                WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytMain, YOUTUBE_ORIGINS)
+                WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytHush, YOUTUBE_ORIGINS)
+            }
+            if (state.settings.ytFeedAds) WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytFeed, YOUTUBE_ORIGINS)
+            if (state.settings.ytBackgroundPlay) WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytBackground, YOUTUBE_ORIGINS)
             WebViewCompat.addDocumentStartJavaScript(wv, extrasConfig() + scripts.ytExtras, YOUTUBE_ORIGINS)
             if (state.settings.fasterLoading) WebViewCompat.addDocumentStartJavaScript(wv, scripts.perf, setOf("*"))
         }
@@ -389,9 +391,11 @@ class MainActivity : ComponentActivity() {
         view.evaluateJavascript(scripts.cosmetic, null)
         val host = Uri.parse(url).host.orEmpty()
         if (host == "youtube.com" || host.endsWith(".youtube.com") || host.endsWith(".youtube-nocookie.com")) {
-            view.evaluateJavascript(scripts.ytMain, null)
-            view.evaluateJavascript(scripts.ytHush, null)
-            view.evaluateJavascript(scripts.ytFeed, null)
+            if (state.settings.ytPlayerAds) {
+                view.evaluateJavascript(scripts.ytMain, null)
+                view.evaluateJavascript(scripts.ytHush, null)
+            }
+            if (state.settings.ytFeedAds) view.evaluateJavascript(scripts.ytFeed, null)
             view.evaluateJavascript(extrasConfig() + scripts.ytExtras, null)
         }
     }

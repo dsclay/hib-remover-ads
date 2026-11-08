@@ -72,6 +72,24 @@ fun SettingsScreen(
                 onChange = settings::updateAutoHideBar,
             )
             SwitchRow(
+                title = "YouTube feed & Shorts ads",
+                subtitle = "Removes ads from feeds and Shorts. Turn off if Shorts get stuck. New tabs.",
+                checked = settings.ytFeedAds,
+                onChange = settings::updateYtFeedAds,
+            )
+            SwitchRow(
+                title = "YouTube player ads",
+                subtitle = "Strips and skips ads in the video player. New tabs.",
+                checked = settings.ytPlayerAds,
+                onChange = settings::updateYtPlayerAds,
+            )
+            SwitchRow(
+                title = "YouTube background play",
+                subtitle = "Keeps YouTube playing when the app is in the background. New tabs.",
+                checked = settings.ytBackgroundPlay,
+                onChange = settings::updateYtBackgroundPlay,
+            )
+            SwitchRow(
                 title = "SponsorBlock",
                 subtitle = "Skips sponsor and self-promo parts of YouTube videos. Applies to new tabs.",
                 checked = settings.sponsorBlock,

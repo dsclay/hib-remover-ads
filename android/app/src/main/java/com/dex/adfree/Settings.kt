@@ -61,6 +61,33 @@ class Settings(context: Context) {
         prefs.edit().putBoolean(KEY_HIDEBAR, value).apply()
     }
 
+    /** Strips ads from YouTube feeds and Shorts (new tabs). */
+    var ytFeedAds by mutableStateOf(prefs.getBoolean(KEY_YTFEED, true))
+        private set
+
+    fun updateYtFeedAds(value: Boolean) {
+        ytFeedAds = value
+        prefs.edit().putBoolean(KEY_YTFEED, value).apply()
+    }
+
+    /** Strips and skips YouTube player ads (new tabs). */
+    var ytPlayerAds by mutableStateOf(prefs.getBoolean(KEY_YTPLAYER, true))
+        private set
+
+    fun updateYtPlayerAds(value: Boolean) {
+        ytPlayerAds = value
+        prefs.edit().putBoolean(KEY_YTPLAYER, value).apply()
+    }
+
+    /** Lets YouTube keep playing in the background (new tabs). */
+    var ytBackgroundPlay by mutableStateOf(prefs.getBoolean(KEY_YTBG, true))
+        private set
+
+    fun updateYtBackgroundPlay(value: Boolean) {
+        ytBackgroundPlay = value
+        prefs.edit().putBoolean(KEY_YTBG, value).apply()
+    }
+
     /** Opens reddit.com pages as old.reddit.com, which is much lighter. */
     var lightReddit by mutableStateOf(prefs.getBoolean(KEY_REDDIT, false))
         private set
@@ -105,6 +132,9 @@ class Settings(context: Context) {
         const val KEY_BOOST = "boostDownloads"
         const val KEY_BOXES = "hideAdBoxes"
         const val KEY_SB = "sponsorBlock"
+        const val KEY_YTFEED = "ytFeedAds"
+        const val KEY_YTPLAYER = "ytPlayerAds"
+        const val KEY_YTBG = "ytBackgroundPlay"
         const val KEY_HIDEBAR = "autoHideBar"
         const val KEY_SPEED = "keepSpeed"
         const val KEY_REDDIT = "lightReddit"
