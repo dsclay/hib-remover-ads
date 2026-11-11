@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
@@ -82,6 +83,7 @@ fun MenuSheet(
     onReload: () -> Unit,
     onSettings: () -> Unit,
     onShowBlocked: () -> Unit,
+    onFind: () -> Unit,
 ) {
     val context = LocalContext.current
     BackHandler(onBack = onDismiss)
@@ -141,6 +143,7 @@ fun MenuSheet(
                 Box(Modifier.fillMaxWidth().height(1.dp).background(Color.White.copy(alpha = 0.12f)))
                 Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     BottomIcon(Icons.Default.Settings, "Settings", onClick = act(onSettings))
+                    BottomIcon(Icons.Default.Search, "Find in page", onClick = act(onFind))
                     BottomIcon(Icons.Default.ArrowDropDown, "Close menu", onClick = onDismiss)
                     BottomIcon(Icons.Default.Close, "Exit", onClick = { (context as? Activity)?.finish() })
                 }

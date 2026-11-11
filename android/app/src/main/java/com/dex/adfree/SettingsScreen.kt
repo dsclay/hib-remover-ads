@@ -1,5 +1,6 @@
 package com.dex.adfree
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -65,29 +66,37 @@ fun SettingsScreen(
                 checked = settings.hideAdBoxes,
                 onChange = settings::updateHideAdBoxes,
             )
+            Surface(
+                shape = RoundedCornerShape(18.dp),
+                color = GlassFill,
+                border = glassBorder(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp),
+            ) {
+                Column(Modifier.padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 8.dp)) {
+                    Text("Search engine", fontWeight = FontWeight.SemiBold)
+                    Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                        Urls.ENGINES.forEach { (name, _) ->
+                            Text(
+                                name,
+                                color = if (settings.searchEngine == name) Amber else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                fontWeight = if (settings.searchEngine == name) FontWeight.Bold else FontWeight.Normal,
+                                style = MaterialTheme.typography.labelLarge,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { settings.updateSearchEngine(name) }
+                                    .padding(vertical = 10.dp),
+                            )
+                        }
+                    }
+                }
+            }
             SwitchRow(
                 title = "Auto-hide bottom bar",
                 subtitle = "Slides the bar away after a few seconds. Tap the handle at the bottom to bring it back.",
                 checked = settings.autoHideBar,
                 onChange = settings::updateAutoHideBar,
-            )
-            SwitchRow(
-                title = "YouTube feed & Shorts ads",
-                subtitle = "Removes ads from feeds and Shorts. Turn off if Shorts get stuck. New tabs.",
-                checked = settings.ytFeedAds,
-                onChange = settings::updateYtFeedAds,
-            )
-            SwitchRow(
-                title = "YouTube player ads",
-                subtitle = "Strips and skips ads in the video player. New tabs.",
-                checked = settings.ytPlayerAds,
-                onChange = settings::updateYtPlayerAds,
-            )
-            SwitchRow(
-                title = "YouTube background play",
-                subtitle = "Keeps YouTube playing when the app is in the background. New tabs.",
-                checked = settings.ytBackgroundPlay,
-                onChange = settings::updateYtBackgroundPlay,
             )
             SwitchRow(
                 title = "SponsorBlock",

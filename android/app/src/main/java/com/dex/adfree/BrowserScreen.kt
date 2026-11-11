@@ -53,6 +53,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -137,6 +138,8 @@ fun BrowserScreen(
     var field by remember { mutableStateOf(TextFieldValue("")) }
     var editing by remember { mutableStateOf(false) }
     var menuOpen by remember { mutableStateOf(false) }
+    var finding by remember { mutableStateOf(false) }
+    var findText by remember { mutableStateOf("") }
     var barShown by remember { mutableStateOf(true) }
 
     // Follow the page (and the selected tab) unless the user is typing.
@@ -338,6 +341,57 @@ fun BrowserScreen(
                 }
             }
 
+            // Find in page: a small glass bar under the status bar
+            LaunchedEffect(tab?.id) { finding = false }
+            if (finding && tab != null) {
+                androidx.activity.compose.BackHandler {
+                    tab.webView.clearMatches()
+                    finding = false
+                }
+                val fr = remember { androidx.compose.ui.focus.FocusRequester() }
+                LaunchedEffect(Unit) { fr.requestFocus() }
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = GlassDialog,
+                    border = glassBorder(),
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .windowInsetsPadding(WindowInsets.systemBars)
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .fillMaxWidth()
+                        .height(48.dp),
+                ) {
+                    Row(Modifier.padding(start = 18.dp, end = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        BasicTextField(
+                            value = findText,
+                            onValueChange = {
+                                findText = it
+                                if (it.isEmpty()) tab.webView.clearMatches() else tab.webView.findAllAsync(it)
+                            },
+                            singleLine = true,
+                            textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.onSurface),
+                            cursorBrush = SolidColor(Amber),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(onSearch = { tab.webView.findNext(true) }),
+                            decorationBox = { inner ->
+                                Box(contentAlignment = Alignment.CenterStart) {
+                                    if (findText.isEmpty()) Text("Find in page", color = colors.onSurface.copy(alpha = 0.5f))
+                                    inner()
+                                }
+                            },
+                            modifier = Modifier.weight(1f).focusRequester(fr),
+                        )
+                        Text("▲", color = Amber, modifier = Modifier.clickable { tab.webView.findNext(false) }.padding(12.dp))
+                        Text("▼", color = Amber, modifier = Modifier.clickable { tab.webView.findNext(true) }.padding(12.dp))
+                        Text("Done", color = Amber, modifier = Modifier.clickable {
+                            tab.webView.clearMatches()
+                            finding = false
+                            focus.clearFocus()
+                        }.padding(12.dp))
+                    }
+                }
+            }
+
             AnimatedVisibility(visible = menuOpen, enter = overlayIn, exit = overlayOut) {
                 MenuSheet(
                     blocked = state.blocked,
@@ -361,6 +415,7 @@ fun BrowserScreen(
                     onReload = onReload,
                     onSettings = { state.showSettings = true },
                     onShowBlocked = onShowBlocked,
+                    onFind = { finding = true },
                 )
             }
 

@@ -15,13 +15,16 @@ object Urls {
     private val URL_IN_TEXT = Regex("https?://\\S+")
 
     /** Address-bar input to a loadable URL: full URL as is, bare domain gets https, anything else is a search. */
-    fun normalize(input: String): String {
+    val ENGINES = listOf("DuckDuckGo" to "https://duckduckgo.com/?q=", "Google" to "https://www.google.com/search?q=",
+        "Brave" to "https://search.brave.com/search?q=", "Bing" to "https://www.bing.com/search?q=")
+
+    fun normalize(input: String, engine: String = "DuckDuckGo"): String {
         val t = input.trim()
         return when {
             t.isEmpty() -> HOME
             HAS_SCHEME.containsMatchIn(t) -> t
             !t.contains(' ') && t.contains('.') -> "https://$t"
-            else -> "https://duckduckgo.com/?q=" + Uri.encode(t)
+            else -> (ENGINES.firstOrNull { it.first == engine } ?: ENGINES[0]).second + Uri.encode(t)
         }
     }
 
