@@ -59,6 +59,8 @@ class Downloader(context: Context, private val settings: Settings) {
     val items = mutableStateListOf<DownloadItem>()
 
     init {
+        // Temporary files from downloads that were cut short by the app being killed; nothing is running yet.
+        runCatching { app.cacheDir.listFiles { f -> f.name.startsWith("dl_") && f.name.endsWith(".part") }?.forEach { it.delete() } }
         runCatching {
             val arr = JSONArray(prefs.getString(KEY, "[]"))
             for (i in 0 until arr.length()) {
@@ -110,7 +112,9 @@ class Downloader(context: Context, private val settings: Settings) {
     fun open(item: DownloadItem) {
         val u = item.uri
         try {
-            if (u != null && u.startsWith("content:")) {
+            // Files that can run code or install apps are never opened straight from the list; show the Downloads folder instead.
+            val risky = item.name.substringAfterLast('.', "").lowercase() in RISKY_EXT
+            if (u != null && u.startsWith("content:") && !risky) {
                 val mime = mimeOf(item.name)
                 app.startActivity(
                     Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(u), mime)
@@ -328,6 +332,7 @@ class Downloader(context: Context, private val settings: Settings) {
         /** Number of downloads currently running (read by the keep-alive service). */
         val ACTIVE = AtomicInteger()
         private const val KEY = "history"
+        private val RISKY_EXT = setOf("apk", "apks", "xapk", "html", "htm", "xhtml", "svg", "js", "sh", "bat", "jar")
         private const val PARTS = 6
         private const val MIN_BOOST = 2L * 1024 * 1024
     }
