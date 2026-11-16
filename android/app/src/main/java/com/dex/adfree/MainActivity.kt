@@ -300,6 +300,7 @@ class MainActivity : ComponentActivity() {
         if (WebViewFeature.isFeatureSupported(WebViewFeature.SAFE_BROWSING_ENABLE)) {
             WebSettingsCompat.setSafeBrowsingEnabled(wv.settings, true)
         }
+        wv.settings.blockNetworkImages = state.settings.blockImages
         if ((applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
             WebView.setWebContentsDebuggingEnabled(true)
         }
@@ -325,6 +326,7 @@ class MainActivity : ComponentActivity() {
             assetLoader = assetLoader,
             blockingEnabled = { host -> state.settings.blockAds && !state.settings.isPaused(host) },
             httpsOnly = { state.settings.httpsOnly },
+            blockFonts = { state.settings.blockFonts },
             rewrite = { u -> redditLite(u).takeIf { it != u } },
             onBlocked = { blockedHost ->
                 blockedHosts.getOrPut(blockedHost) { AtomicInteger() }.incrementAndGet()
@@ -396,8 +398,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun ytQualityCode(): String = when (state.settings.ytQuality) {
+        "144p" -> "tiny"
+        "240p" -> "small"
+        "360p" -> "medium"
+        "480p" -> "large"
+        else -> ""
+    }
+
     private fun extrasConfig(): String =
-        "window.__hhCfg={sb:${state.settings.sponsorBlock},speed:${state.settings.keepSpeed}};"
+        "window.__hhCfg={sb:${state.settings.sponsorBlock},speed:${state.settings.keepSpeed},q:'${ytQualityCode()}'};"
 
     /** reddit.com to old.reddit.com when "Lighter Reddit" is on; any other URL is unchanged. */
     private fun redditLite(url: String): String {

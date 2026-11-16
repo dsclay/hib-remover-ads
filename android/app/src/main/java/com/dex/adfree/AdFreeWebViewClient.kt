@@ -21,6 +21,7 @@ class AdFreeWebViewClient(
     private val assetLoader: WebViewAssetLoader,
     private val blockingEnabled: (String?) -> Boolean,
     private val httpsOnly: () -> Boolean,
+    private val blockFonts: () -> Boolean,
     private val rewrite: (String) -> String?,
     private val onBlocked: (String) -> Unit,
     private val onMedia: (String, Map<String, String>) -> Unit,
@@ -28,6 +29,8 @@ class AdFreeWebViewClient(
     private val onNavigated: (WebView, String) -> Unit,
     private val onRenderGone: () -> Unit,
 ) : WebViewClient() {
+
+    private val FONT = Regex("\\.(woff2?|ttf|otf|eot)$")
 
     /** Host of the page this tab is showing; read from the WebView worker threads, so volatile. */
     @Volatile private var pageHost: String? = null
@@ -40,6 +43,9 @@ class AdFreeWebViewClient(
         if (blockingEnabled(pageHost) && blocker.shouldBlock(request.url, pageHost)) {
             onBlocked(request.url.host ?: "")
             return WebResourceResponse("text/plain", "utf-8", 403, "Blocked", emptyMap(), ByteArrayInputStream(ByteArray(0)))
+        }
+        if (blockFonts() && FONT.containsMatchIn(request.url.path.orEmpty().lowercase())) {
+            return WebResourceResponse("text/plain", "utf-8", 404, "Not found", emptyMap(), ByteArrayInputStream(ByteArray(0)))
         }
         if (Media.isMedia(request)) onMedia(request.url.toString(), HashMap(request.requestHeaders ?: emptyMap()))
         return null

@@ -6,6 +6,7 @@
   var cfg = window.__hhCfg || {};
   var CATS = ['sponsor', 'selfpromo', 'interaction'];
   var SPEEDS = [1, 1.25, 1.5, 1.75, 2, 0.75];
+  var qTries = 0;
   var videoId = '', segs = [], skipped = {}, hooked = null, setting = false, pill = null, toastEl = null;
 
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) {} return null; }
@@ -77,7 +78,11 @@
   }
   function tick() {
     var id = currentId();
-    if (id !== videoId) { videoId = id; loadSegments(id); }
+    if (id !== videoId) { videoId = id; qTries = 0; loadSegments(id); }
+    if (cfg.q && id && qTries++ < 24) {
+      var pl = document.getElementById('movie_player');
+      if (pl && pl.setPlaybackQualityRange) { try { pl.setPlaybackQualityRange(cfg.q, cfg.q); pl.setPlaybackQuality(cfg.q); } catch (e) {} }
+    }
     var v = document.querySelector('video');
     ensurePill();
     if (!v) return;

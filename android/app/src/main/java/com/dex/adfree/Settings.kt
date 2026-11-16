@@ -70,6 +70,33 @@ class Settings(context: Context) {
         prefs.edit().putString(KEY_ENGINE, value).apply()
     }
 
+    /** Data saver: do not load images (new tabs). */
+    var blockImages by mutableStateOf(prefs.getBoolean(KEY_NOIMG, false))
+        private set
+
+    fun updateBlockImages(value: Boolean) {
+        blockImages = value
+        prefs.edit().putBoolean(KEY_NOIMG, value).apply()
+    }
+
+    /** Data saver: do not load web fonts. */
+    var blockFonts by mutableStateOf(prefs.getBoolean(KEY_NOFONT, false))
+        private set
+
+    fun updateBlockFonts(value: Boolean) {
+        blockFonts = value
+        prefs.edit().putBoolean(KEY_NOFONT, value).apply()
+    }
+
+    /** Highest YouTube quality to use ("Auto" = YouTube decides). */
+    var ytQuality by mutableStateOf(prefs.getString(KEY_YTQ, "Auto") ?: "Auto")
+        private set
+
+    fun updateYtQuality(value: String) {
+        ytQuality = value
+        prefs.edit().putString(KEY_YTQ, value).apply()
+    }
+
     /** Opens reddit.com pages as old.reddit.com, which is much lighter. */
     var lightReddit by mutableStateOf(prefs.getBoolean(KEY_REDDIT, false))
         private set
@@ -114,6 +141,9 @@ class Settings(context: Context) {
         const val KEY_BOOST = "boostDownloads"
         const val KEY_BOXES = "hideAdBoxes"
         const val KEY_SB = "sponsorBlock"
+        const val KEY_NOIMG = "blockImages"
+        const val KEY_NOFONT = "blockFonts"
+        const val KEY_YTQ = "ytQuality"
         const val KEY_ENGINE = "searchEngine"
         const val KEY_HIDEBAR = "autoHideBar"
         const val KEY_SPEED = "keepSpeed"

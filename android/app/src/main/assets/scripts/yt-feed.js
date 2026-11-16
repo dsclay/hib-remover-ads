@@ -47,13 +47,20 @@
     return data;
   };
 
-  JSON.parse = new Proxy(JSON.parse, {
-    apply: (target, self, args) => prune(Reflect.apply(target, self, args)),
+  // Most responses contain no ad markers at all: look for them in the raw text (fast) before walking the data (slow).
+  const MARKERS = new RegExp('"(' + AD_KEYS.concat(['adClientParams']).join('|') + ')"');
+  const parse = JSON.parse;
+  JSON.parse = new Proxy(parse, {
+    apply: (target, self, args) => {
+      const data = Reflect.apply(target, self, args);
+      return typeof args[0] === 'string' && !MARKERS.test(args[0]) ? data : prune(data);
+    },
   });
 
-  Response.prototype.json = new Proxy(Response.prototype.json, {
-    apply: (target, self, args) => Reflect.apply(target, self, args).then(prune),
-  });
+  const text = Response.prototype.text;
+  Response.prototype.json = function () {
+    return text.call(this).then((t) => (MARKERS.test(t) ? prune(parse(t)) : parse(t)));
+  };
 
   // The first page of a feed is embedded in the HTML as a global assignment.
   let initial;

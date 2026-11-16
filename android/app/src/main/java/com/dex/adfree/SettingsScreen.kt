@@ -93,6 +93,44 @@ fun SettingsScreen(
                 }
             }
             SwitchRow(
+                title = "Data saver: block images",
+                subtitle = "Pages load much faster on slow data, but show no pictures. Applies to new tabs.",
+                checked = settings.blockImages,
+                onChange = settings::updateBlockImages,
+            )
+            SwitchRow(
+                title = "Data saver: block web fonts",
+                subtitle = "Saves data. Some sites may show plain text where icons were.",
+                checked = settings.blockFonts,
+                onChange = settings::updateBlockFonts,
+            )
+            Surface(
+                shape = RoundedCornerShape(18.dp),
+                color = GlassFill,
+                border = glassBorder(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp),
+            ) {
+                Column(Modifier.padding(start = 16.dp, top = 12.dp, end = 16.dp, bottom = 8.dp)) {
+                    Text("YouTube max quality", fontWeight = FontWeight.SemiBold)
+                    Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                        listOf("Auto", "144p", "240p", "360p", "480p").forEach { name ->
+                            Text(
+                                name,
+                                color = if (settings.ytQuality == name) Amber else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                                fontWeight = if (settings.ytQuality == name) FontWeight.Bold else FontWeight.Normal,
+                                style = MaterialTheme.typography.labelLarge,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { settings.updateYtQuality(name) }
+                                    .padding(vertical = 10.dp),
+                            )
+                        }
+                    }
+                }
+            }
+            SwitchRow(
                 title = "Auto-hide bottom bar",
                 subtitle = "Slides the bar away after a few seconds. Tap the handle at the bottom to bring it back.",
                 checked = settings.autoHideBar,
