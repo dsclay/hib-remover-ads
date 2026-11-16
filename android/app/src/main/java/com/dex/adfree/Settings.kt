@@ -12,9 +12,8 @@ class Settings(context: Context) {
     var blockAds by mutableStateOf(prefs.getBoolean(KEY_BLOCK, true))
         private set
 
-    /** Off by default: upgrading every http link breaks sites that have no https version. */
-    var httpsOnly by mutableStateOf(prefs.getBoolean(KEY_HTTPS, false))
-        private set
+    /** Always on: http links are opened as https. */
+    val httpsOnly = true
 
     /** Parallel-connection downloads. */
     var boostDownloads by mutableStateOf(prefs.getBoolean(KEY_BOOST, true))
@@ -25,14 +24,8 @@ class Settings(context: Context) {
         prefs.edit().putBoolean(KEY_BOOST, value).apply()
     }
 
-    /** Cosmetic ad-box hiding (a large style sheet on every page; can slow big pages). Applies to new tabs. */
-    var hideAdBoxes by mutableStateOf(prefs.getBoolean(KEY_BOXES, true))
-        private set
-
-    fun updateHideAdBoxes(value: Boolean) {
-        hideAdBoxes = value
-        prefs.edit().putBoolean(KEY_BOXES, value).apply()
-    }
+    /** Cosmetic ad-box hiding: always on. */
+    val hideAdBoxes = true
 
     /** Skips sponsor segments in YouTube videos (SponsorBlock data). */
     var sponsorBlock by mutableStateOf(prefs.getBoolean(KEY_SB, true))
@@ -128,11 +121,6 @@ class Settings(context: Context) {
     fun updateBlockAds(value: Boolean) {
         blockAds = value
         prefs.edit().putBoolean(KEY_BLOCK, value).apply()
-    }
-
-    fun updateHttpsOnly(value: Boolean) {
-        httpsOnly = value
-        prefs.edit().putBoolean(KEY_HTTPS, value).apply()
     }
 
     private companion object {

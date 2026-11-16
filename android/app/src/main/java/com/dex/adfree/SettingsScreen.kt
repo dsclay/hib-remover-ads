@@ -46,12 +46,6 @@ fun SettingsScreen(
                 checked = settings.blockAds,
                 onChange = settings::updateBlockAds,
             )
-            SwitchRow(
-                title = "HTTPS-only mode",
-                subtitle = "Upgrade http links to https. Off by default: some sites have no https version.",
-                checked = settings.httpsOnly,
-                onChange = settings::updateHttpsOnly,
-            )
 
             SwitchRow(
                 title = "Boost downloads",
@@ -60,12 +54,6 @@ fun SettingsScreen(
                 onChange = settings::updateBoostDownloads,
             )
 
-            SwitchRow(
-                title = "Hide ad boxes",
-                subtitle = "Hides empty ad spaces on pages. Turn off if big pages feel slow. Applies to new tabs.",
-                checked = settings.hideAdBoxes,
-                onChange = settings::updateHideAdBoxes,
-            )
             Surface(
                 shape = RoundedCornerShape(18.dp),
                 color = GlassFill,

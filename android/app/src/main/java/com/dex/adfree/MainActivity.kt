@@ -90,7 +90,14 @@ class MainActivity : ComponentActivity() {
                     state.showLibrary -> state.showLibrary = false
                     state.showDownloads -> state.showDownloads = false
                     state.showTabs -> state.showTabs = false
-                    state.current?.webView?.canGoBack() == true -> state.current?.webView?.goBack()
+                    state.current?.webView?.canGoBack() == true -> {
+                        val wv = state.current!!.webView
+                        val u = Uri.parse(wv.url ?: "")
+                        val path = u.path.orEmpty()
+                        val ytVideo = u.host?.endsWith("youtube.com") == true && (path.startsWith("/watch") || path.startsWith("/shorts"))
+                        // On a YouTube video or Short, let the page handle Back itself (like its own app does) instead of reloading.
+                        if (ytVideo) wv.evaluateJavascript("history.back()", null) else wv.goBack()
+                    }
                     else -> finish()
                 }
             }
