@@ -57,6 +57,19 @@ class AdBlocker(context: Context) {
         }
     }
 
+    /** True when [host] (or a parent domain) is a known ad domain: used to stop pop-up and redirect ads from taking over the page. */
+    fun isAdDomain(host: String?): Boolean {
+        var h = host?.lowercase(Locale.ROOT) ?: return false
+        val ext = extended
+        while (true) {
+            if (h in NEVER_BLOCK_DOMAINS) return false
+            if (h in domains || (ext != null && h in ext.domains)) return true
+            val dot = h.indexOf('.')
+            if (dot < 0) return false
+            h = h.substring(dot + 1)
+        }
+    }
+
     /**
      * True when a sub-resource request to [url] should be dropped. [pageHost] is the host of the page
      * that made the request (used for first/third-party and per-site rules). Main-frame loads are never blocked.

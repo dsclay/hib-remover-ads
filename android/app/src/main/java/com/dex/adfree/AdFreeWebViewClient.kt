@@ -53,6 +53,13 @@ class AdFreeWebViewClient(
 
     override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
         val uri = request?.url ?: return false
+        // A page sending you to a known ad domain (pop-ups and click-redirects) is stopped here. Typed addresses never come through this path.
+        if (request.isForMainFrame && (uri.scheme == "http" || uri.scheme == "https") &&
+            blockingEnabled(pageHost) && uri.host != pageHost && blocker.isAdDomain(uri.host)
+        ) {
+            onBlocked(uri.host ?: "")
+            return true
+        }
         return when (uri.scheme?.lowercase()) {
             "http" -> {
                 if (httpsOnly() && request.isForMainFrame) {
