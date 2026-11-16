@@ -463,6 +463,18 @@ class MainActivity : ComponentActivity() {
         CookieManager.getInstance().removeAllCookies(null)
         WebStorage.getInstance().deleteAllData()
         state.tabs.filter { !it.isPrivate }.forEach { it.webView.clearCache(true) }
+        // Open private tabs keep their data in their own profiles, which the calls above do not touch.
+        state.tabs.filter { it.isPrivate }.forEach { t ->
+            runCatching {
+                t.profile?.let { name ->
+                    ProfileStore.getInstance().getProfile(name)?.let { p ->
+                        p.cookieManager.removeAllCookies(null)
+                        p.webStorage.deleteAllData()
+                    }
+                }
+                t.webView.clearCache(true)
+            }
+        }
         Toast.makeText(this, "Browsing data cleared", Toast.LENGTH_SHORT).show()
     }
 
