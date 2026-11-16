@@ -2,6 +2,8 @@ package com.dex.adfree
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,6 +35,7 @@ fun SettingsScreen(
             Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.systemBars)
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -129,12 +132,6 @@ fun SettingsScreen(
                 subtitle = "Skips sponsor and self-promo parts of YouTube videos. Applies to new tabs.",
                 checked = settings.sponsorBlock,
                 onChange = settings::updateSponsorBlock,
-            )
-            SwitchRow(
-                title = "Remember video speed",
-                subtitle = "Keeps your YouTube speed and adds a speed button on videos. Applies to new tabs.",
-                checked = settings.keepSpeed,
-                onChange = settings::updateKeepSpeed,
             )
             SwitchRow(
                 title = "Lighter Reddit",

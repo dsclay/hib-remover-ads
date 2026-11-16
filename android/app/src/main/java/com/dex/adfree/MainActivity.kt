@@ -414,7 +414,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun extrasConfig(): String =
-        "window.__hhCfg={sb:${state.settings.sponsorBlock},speed:${state.settings.keepSpeed},q:'${ytQualityCode()}'};"
+        "window.__hhCfg={sb:${state.settings.sponsorBlock},speed:false,q:'${ytQualityCode()}'};"
 
     /** reddit.com to old.reddit.com when "Lighter Reddit" is on; any other URL is unchanged. */
     private fun redditLite(url: String): String {
