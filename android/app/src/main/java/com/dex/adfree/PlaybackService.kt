@@ -248,8 +248,8 @@ class PlaybackService : Service() {
                 "return JSON.stringify({t:m?m.title:document.title,a:m?m.artist:'',img:a,p:v?!v.paused:false," +
                 "d:v?v.duration:0,c:v?v.currentTime:0})})()"
         const val PLAY = "(function(){var v=document.querySelector('video');if(v)v.play()})()"
-        const val PAUSE = "(function(){var v=document.querySelector('video');if(v)v.pause()})()"
-        const val TOGGLE = "(function(){var v=document.querySelector('video');if(v){if(v.paused)v.play();else v.pause()}})()"
+        const val PAUSE = "(function(){window.__hhUserPause=true;var v=document.querySelector('video');if(v)v.pause()})()"
+        const val TOGGLE = "(function(){var v=document.querySelector('video');if(v){if(v.paused)v.play();else{window.__hhUserPause=true;v.pause()}}})()"
         const val NEXT =
             "(function(){var b=document.querySelector('.ytp-next-button,button[aria-label*=\"Next\"]');var v=document.querySelector('video');" +
                 "if(b)b.click();else if(v&&v.duration)v.currentTime=v.duration})()"
