@@ -90,14 +90,8 @@ class Settings(context: Context) {
         prefs.edit().putString(KEY_YTQ, value).apply()
     }
 
-    /** Opens reddit.com pages as old.reddit.com, which is much lighter. */
-    var lightReddit by mutableStateOf(prefs.getBoolean(KEY_REDDIT, false))
-        private set
-
-    fun updateLightReddit(value: Boolean) {
-        lightReddit = value
-        prefs.edit().putBoolean(KEY_REDDIT, value).apply()
-    }
+    /** The old.reddit.com option was removed: Reddit now works normally. */
+    val lightReddit = false
 
     /** Lazy-load images and frames. Read when a tab is created, so it applies to new tabs. */
     var fasterLoading by mutableStateOf(prefs.getBoolean(KEY_FAST, true))

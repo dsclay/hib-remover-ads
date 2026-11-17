@@ -134,12 +134,6 @@ fun SettingsScreen(
                 onChange = settings::updateSponsorBlock,
             )
             SwitchRow(
-                title = "Lighter Reddit",
-                subtitle = "Opens Reddit as old.reddit.com. Plainer, but fast and doesn't freeze.",
-                checked = settings.lightReddit,
-                onChange = settings::updateLightReddit,
-            )
-            SwitchRow(
                 title = "Faster page loading",
                 subtitle = "Lazy-load images and frames. Applies to new tabs.",
                 checked = settings.fasterLoading,
