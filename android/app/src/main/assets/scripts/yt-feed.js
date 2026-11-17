@@ -1,6 +1,10 @@
 // Removes sponsored items from YouTube's feeds and Shorts before the page renders them.
 // Complements yt-main.js, which only strips in-player ad data.
 (() => {
+  // Install once per page: a second install would replace the ytInitialData hook and lose the value the first one stored.
+  if (window.__adfreeFeed) return;
+  window.__adfreeFeed = true;
+
   const AD_KEYS = [
     'adSlotRenderer', 'promotedSparklesWebRenderer', 'promotedSparklesTextSearchRenderer',
     'compactPromotedVideoRenderer', 'promotedVideoRenderer', 'displayAdRenderer',
@@ -32,8 +36,10 @@
       }
       return;
     }
-    for (const k in node) {
-      const v = node[k];
+    // Object.keys: own enumerable properties only, skipping the prototype chain.
+    const keys = Object.keys(node);
+    for (let i = 0; i < keys.length; i++) {
+      const v = node[keys[i]];
       if (v && typeof v === 'object') walk(v, depth + 1);
     }
   };
