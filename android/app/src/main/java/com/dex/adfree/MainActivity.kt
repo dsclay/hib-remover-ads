@@ -579,7 +579,7 @@ class MainActivity : ComponentActivity() {
         val REDDIT_ORIGINS = setOf("https://reddit.com", "https://*.reddit.com")
         const val REDDIT_CSS_JS =
             "(function(){var s=document.createElement('style');" +
-                "s.textContent='shreddit-ad-post,shreddit-comments-page-ad,shreddit-sidebar-ad,a[href=\"#main-content\"]{display:none!important}';" +
+                "s.textContent='shreddit-ad-post,shreddit-comments-page-ad,shreddit-sidebar-ad,a[href=\"#main-content\"]{display:none!important}html,body{overflow-y:auto!important;position:static!important}';" +
                 "(document.head||document.documentElement).appendChild(s)})()"
         const val PAUSE_MEDIA =
             "document.querySelectorAll('video,audio').forEach(function(m){try{m.pause()}catch(e){}})"
