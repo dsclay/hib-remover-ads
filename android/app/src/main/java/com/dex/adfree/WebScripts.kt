@@ -43,7 +43,8 @@ class WebScripts(context: Context) {
     private fun cosmeticLoader(css: String, skipHosts: List<String>): String = """
         (function () {
           if (window !== window.top) return; // top frame only: cheaper, ads are blocked at the network level anyway
-          var skip = new Set(${JSONArray(skipHosts)});
+          // reddit.com: the generic hiding rules can hide its "load more" marker and stall the feed (its ads are hidden separately)
+          var skip = new Set(${JSONArray(skipHosts + listOf("reddit.com", "redd.it"))});
           for (var p = location.hostname.toLowerCase(); p; ) {
             if (skip.has(p)) return;
             var i = p.indexOf('.');
