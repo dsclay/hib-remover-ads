@@ -316,6 +316,7 @@ class MainActivity : ComponentActivity() {
         // all before the page's own scripts run.
         if (documentStartScripts) {
             if (state.settings.hideAdBoxes) WebViewCompat.addDocumentStartJavaScript(wv, scripts.cosmetic, setOf("*"))
+            WebViewCompat.addDocumentStartJavaScript(wv, REDDIT_CSS_JS, REDDIT_ORIGINS)
             WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytMain, YOUTUBE_ORIGINS)
             WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytHush, YOUTUBE_ORIGINS)
             WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytFeed, YOUTUBE_ORIGINS)
@@ -574,6 +575,12 @@ class MainActivity : ComponentActivity() {
         }
 
         const val MAX_RESTORED = 10
+        // Reddit skips the big rule set (it breaks the site), so its promoted posts are hidden by style instead.
+        val REDDIT_ORIGINS = setOf("https://reddit.com", "https://*.reddit.com")
+        const val REDDIT_CSS_JS =
+            "(function(){var s=document.createElement('style');" +
+                "s.textContent='shreddit-ad-post,shreddit-comments-page-ad,shreddit-sidebar-ad,a[href=\"#main-content\"]{display:none!important}';" +
+                "(document.head||document.documentElement).appendChild(s)})()"
         const val PAUSE_MEDIA =
             "document.querySelectorAll('video,audio').forEach(function(m){try{m.pause()}catch(e){}})"
         val YOUTUBE_ORIGINS = setOf(
