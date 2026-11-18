@@ -538,6 +538,9 @@ class MainActivity : ComponentActivity() {
         customViewCallback?.onCustomViewHidden()
         customViewCallback = callback
         state.customView = view
+        // Fullscreen video turns the screen sideways (Shorts stay upright).
+        val path = Uri.parse(state.current?.webView?.url ?: "").path.orEmpty()
+        if (!path.startsWith("/shorts")) requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         WindowInsetsControllerCompat(window, window.decorView).apply {
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             hide(WindowInsetsCompat.Type.systemBars())
@@ -550,6 +553,7 @@ class MainActivity : ComponentActivity() {
         val callback = customViewCallback
         customViewCallback = null
         callback?.onCustomViewHidden()
+        requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         WindowInsetsControllerCompat(window, window.decorView).show(WindowInsetsCompat.Type.systemBars())
     }
 
