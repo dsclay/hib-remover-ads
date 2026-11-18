@@ -76,6 +76,27 @@
     }
     pill.style.display = show ? '' : 'none';
   }
+  // Hide the floating "Summarise the video" chip that sits over the description.
+  function hideSummarise() {
+    try {
+      var nodes = document.querySelectorAll('button,[role=button],yt-chip-cloud-chip-renderer,ytm-chip-cloud-chip-renderer');
+      for (var i = 0; i < nodes.length; i++) {
+        var el = nodes[i];
+        if (el.__hhSum) continue;
+        var t = (el.textContent || '').trim().toLowerCase();
+        if (t.length > 3 && t.length < 30 && t.indexOf('summar') === 0) {
+          el.__hhSum = true;
+          var box = el;
+          for (var n = 0; n < 4 && box.parentElement; n++) {
+            var p = box.parentElement, pos = getComputedStyle(p).position;
+            box = p;
+            if (pos === 'fixed' || pos === 'sticky' || pos === 'absolute') break;
+          }
+          (getComputedStyle(box).position === 'static' ? el : box).style.setProperty('display', 'none', 'important');
+        }
+      }
+    } catch (e) {}
+  }
   function tick() {
     var id = currentId();
     if (id !== videoId) { videoId = id; qTries = 0; loadSegments(id); }
@@ -85,6 +106,7 @@
     }
     var v = document.querySelector('video');
     ensurePill();
+    hideSummarise();
     if (!v) return;
     hook(v);
     if (cfg.speed) applySpeed(v);
