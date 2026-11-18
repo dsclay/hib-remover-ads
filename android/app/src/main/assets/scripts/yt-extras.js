@@ -97,6 +97,34 @@
       }
     } catch (e) {}
   }
+  // When the description panel slides over the player, the video picture can stay drawn on top of it.
+  // If something other than the player is at the point where the video is, hide the video until it is uncovered.
+  var coverBusy = false;
+  function fixCover() {
+    coverBusy = false;
+    try {
+      var v = document.querySelector('video');
+      if (!v) return;
+      var r = v.getBoundingClientRect();
+      var top = Math.max(r.top, 90), bottom = Math.min(r.bottom, window.innerHeight);
+      var hide = false;
+      if (r.width > 0 && bottom - top > 8) {
+        var el = document.elementFromPoint(window.innerWidth / 2, (top + bottom) / 2);
+        var box = v.closest('.html5-video-player') || v.parentElement;
+        hide = !!el && !v.contains(el) && !(box && box.contains(el)) && el !== document.documentElement && el !== document.body;
+      }
+      if (hide) { v.style.setProperty('visibility', 'hidden', 'important'); v.__hhHid = true; }
+      else if (v.__hhHid) { v.style.removeProperty('visibility'); v.__hhHid = false; }
+    } catch (e) {}
+  }
+  function scheduleCover() {
+    if (coverBusy) return;
+    coverBusy = true;
+    requestAnimationFrame(fixCover);
+  }
+  window.addEventListener('scroll', scheduleCover, true);
+  window.addEventListener('touchmove', scheduleCover, true);
+
   function tick() {
     var id = currentId();
     if (id !== videoId) { videoId = id; qTries = 0; loadSegments(id); }
@@ -107,6 +135,7 @@
     var v = document.querySelector('video');
     ensurePill();
     hideSummarise();
+    fixCover();
     if (!v) return;
     hook(v);
     if (cfg.speed) applySpeed(v);
