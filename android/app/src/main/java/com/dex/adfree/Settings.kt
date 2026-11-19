@@ -93,6 +93,15 @@ class Settings(context: Context) {
     /** The old.reddit.com option was removed: Reddit now works normally. */
     val lightReddit = false
 
+    /** How many parallel connections a boosted download uses. */
+    var connections by mutableStateOf(prefs.getInt(KEY_CONN, 6))
+        private set
+
+    fun updateConnections(value: Int) {
+        connections = value
+        prefs.edit().putInt(KEY_CONN, value).apply()
+    }
+
     /** Lazy-load images and frames. Read when a tab is created, so it applies to new tabs. */
     var fasterLoading by mutableStateOf(prefs.getBoolean(KEY_FAST, true))
         private set
@@ -123,6 +132,7 @@ class Settings(context: Context) {
         const val KEY_BOOST = "boostDownloads"
         const val KEY_BOXES = "hideAdBoxes"
         const val KEY_SB = "sponsorBlock"
+        const val KEY_CONN = "connections"
         const val KEY_NOIMG = "blockImages"
         const val KEY_NOFONT = "blockFonts"
         const val KEY_YTQ = "ytQuality"

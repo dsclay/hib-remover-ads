@@ -182,7 +182,7 @@ class Downloader(context: Context, private val settings: Settings) {
                 else -> throw IOException("Server said $code")
             }
             item.total = total
-            val parts = if (settings.boostDownloads && ranged && total >= MIN_BOOST) PARTS else 1
+            val parts = if (settings.boostDownloads && ranged && total >= MIN_BOOST) settings.connections.coerceIn(2, 16) else 1
             item.parts = parts
             item.resumable = ranged
             if (ranged) {

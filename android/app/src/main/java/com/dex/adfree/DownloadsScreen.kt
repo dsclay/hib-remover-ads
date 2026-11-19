@@ -58,10 +58,24 @@ fun DownloadsScreen(downloader: Downloader, settings: Settings, onDismiss: () ->
             }
             SwitchRow(
                 title = "Boost downloads",
-                subtitle = "Fetch big files with up to 6 parallel connections",
+                subtitle = "Fetch big files with up to ${settings.connections} parallel connections",
                 checked = settings.boostDownloads,
                 onChange = settings::updateBoostDownloads,
             )
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Connections", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(end = 8.dp))
+                listOf(6, 8, 12, 16).forEach { n ->
+                    Text(
+                        "$n",
+                        color = if (settings.connections == n) Amber else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                        fontWeight = if (settings.connections == n) FontWeight.Bold else FontWeight.Normal,
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable { settings.updateConnections(n) }
+                            .padding(vertical = 10.dp),
+                    )
+                }
+            }
             if (downloader.items.isEmpty()) {
                 Text(
                     "Nothing downloaded yet",
