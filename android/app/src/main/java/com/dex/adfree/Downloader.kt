@@ -233,9 +233,9 @@ class Downloader(context: Context, private val settings: Settings) {
 
     private class Seg(val url: String, val keyUrl: String?, val iv: ByteArray?, val seq: Long)
 
-    private fun fetchBytes(url: String, headers: Map<String, String>): ByteArray {
+    private fun fetchOnce(url: String, headers: Map<String, String>): ByteArray {
         var last: Exception? = null
-        repeat(3) {
+        repeat(2) {
             try {
                 val c = connect(url, headers, null)
                 if (c.responseCode != 200) throw IOException("Server said ${c.responseCode}")
@@ -245,12 +245,35 @@ class Downloader(context: Context, private val settings: Settings) {
         throw last ?: IOException("Failed")
     }
 
+    /** Some CDNs check Referer/Origin strictly, so a 403 is retried with a few header variants. */
+    private fun fetchBytes(url: String, headers: Map<String, String>, what: String = "File"): ByteArray {
+        try {
+            return fetchOnce(url, headers)
+        } catch (e: IOException) {
+            if (e.message?.contains("403") != true) throw IOException("$what: ${e.message}")
+        }
+        val u = Uri.parse(url)
+        val root = "${u.scheme}://${u.authority}"
+        val ref = headers["Referer"]
+        val refRoot = ref?.let { Uri.parse(it) }?.let { "${it.scheme}://${it.authority}" }
+        val variants = listOfNotNull(
+            headers.filterKeys { it != "Origin" },
+            refRoot?.let { headers + mapOf("Referer" to "$it/", "Origin" to it) },
+            headers + mapOf("Referer" to "$root/", "Origin" to root),
+            headers.filterKeys { it != "Origin" && it != "Referer" },
+        )
+        for (v in variants) {
+            try { return fetchOnce(url, v) } catch (_: IOException) {}
+        }
+        throw IOException("$what blocked (403) by ${u.host}")
+    }
+
     private fun resolve(base: String, ref: String): String = URL(URL(base), ref).toString()
 
     /** Downloads every segment of an HLS playlist (highest quality, AES-128 supported) and joins them into one file. */
     private fun hls(item: DownloadItem, headers: Map<String, String>, tmp: File, counter: AtomicLong) {
         var playlistUrl = item.url
-        var text = String(fetchBytes(playlistUrl, headers))
+        var text = String(fetchBytes(playlistUrl, headers, "Playlist"))
         repeat(2) {
             if (!text.contains("#EXT-X-STREAM-INF")) return@repeat
             val lines = text.lines().map { it.trim() }
@@ -263,7 +286,7 @@ class Downloader(context: Context, private val settings: Settings) {
                 if (bw > best) { best = bw; bestUrl = u }
             }
             playlistUrl = resolve(playlistUrl, bestUrl ?: throw IOException("Empty playlist"))
-            text = String(fetchBytes(playlistUrl, headers))
+            text = String(fetchBytes(playlistUrl, headers, "Playlist"))
         }
         if (!text.contains("#EXTINF")) throw IOException("No video in playlist")
         if (!text.contains("#EXT-X-ENDLIST")) throw IOException("Live stream can't be saved")
@@ -303,9 +326,9 @@ class Downloader(context: Context, private val settings: Settings) {
         if (segs.isEmpty()) throw IOException("No video in playlist")
         val keys = ConcurrentHashMap<String, ByteArray>()
         fun load(s: Seg): ByteArray {
-            var data = fetchBytes(s.url, headers)
+            var data = fetchBytes(s.url, headers, "Video part")
             val k = s.keyUrl ?: return data
-            val key = keys.getOrPut(k) { fetchBytes(k, headers) }
+            val key = keys.getOrPut(k) { fetchBytes(k, headers, "Key") }
             val iv = s.iv ?: ByteArray(16).also { b -> var v = s.seq; for (i in 15 downTo 8) { b[i] = (v and 0xff).toByte(); v = v shr 8 } }
             val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
             cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), IvParameterSpec(iv))
