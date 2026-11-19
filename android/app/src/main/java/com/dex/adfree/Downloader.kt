@@ -168,7 +168,7 @@ class Downloader(context: Context, private val settings: Settings) {
         }
         main.post(ticker)
         try {
-            if (item.url.substringBefore('?').lowercase().endsWith(".m3u8")) {
+            if (item.url.lowercase().let { it.contains(".m3u8") || it.contains("/m3u8") }) {
                 hls(item, headers, tmp, counter)
             } else {
             var probe = connect(item.url, headers, "bytes=0-0")

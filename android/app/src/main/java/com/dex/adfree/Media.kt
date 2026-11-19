@@ -18,6 +18,9 @@ object Media {
         val host = url.host?.lowercase(Locale.ROOT) ?: return false
         if (SKIP_HOSTS.any { host == it || host.endsWith(".$it") }) return false
         val path = url.path?.lowercase(Locale.ROOT) ?: return false
+        // Playlists are often served from odd paths, e.g. /hls/m3u8/abc or ?file=x.m3u8.
+        val whole = url.toString().lowercase(Locale.ROOT)
+        if (whole.contains(".m3u8") || path.contains("/m3u8")) return true
         if (MEDIA_EXT.containsMatchIn(path)) return true
         if (NOT_MEDIA_EXT.containsMatchIn(path)) return false
         // Video and audio elements fetch with a Range header, even when the URL has no file extension.

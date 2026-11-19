@@ -74,11 +74,11 @@ class AdFreeWebViewClient(
                 if (to != null) { view?.loadUrl(to); true } else false
             }
             "about", "data", "blob" -> false
-            "mailto", "tel", "sms" -> {
+            "mailto", "tel", "sms", "magnet" -> {
                 try {
                     view?.context?.startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 } catch (_: ActivityNotFoundException) {
-                    // No app for it; ignore.
+                    if (uri.scheme == "magnet") android.widget.Toast.makeText(view?.context, "Install a torrent app (e.g. LibreTorrent) to open magnet links", android.widget.Toast.LENGTH_LONG).show()
                 }
                 true
             }
