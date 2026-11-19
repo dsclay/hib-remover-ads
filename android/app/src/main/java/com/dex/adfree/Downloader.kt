@@ -43,6 +43,10 @@ class DownloadItem(val id: Int, val name: String, val url: String) {
     var paused by mutableStateOf(false)
     @Volatile var userCancelled = false
     var persist = true
+    var resumable by mutableStateOf(false)
+    @Volatile var segProgress: java.util.concurrent.atomic.AtomicLongArray? = null
+    @Volatile var segSizes: LongArray = LongArray(0)
+    var segSnap by mutableStateOf<List<Long>>(emptyList())
 }
 
 /**
@@ -153,6 +157,7 @@ class Downloader(context: Context, private val settings: Settings) {
                 item.speed = (now - last) * 2
                 last = now
                 item.done = now
+                item.segProgress?.let { p -> item.segSnap = List(p.length()) { p.get(it) } }
                 main.postDelayed(this, 500)
             }
         }
@@ -179,6 +184,7 @@ class Downloader(context: Context, private val settings: Settings) {
             item.total = total
             val parts = if (settings.boostDownloads && ranged && total >= MIN_BOOST) PARTS else 1
             item.parts = parts
+            item.resumable = ranged
             if (ranged) {
                 probe.disconnect()
                 multi(item, finalUrl, headers, tmp, total, parts, counter)
@@ -192,6 +198,7 @@ class Downloader(context: Context, private val settings: Settings) {
             }
             if (item.abort) throw IOException("cancelled")
             item.done = counter.get()
+            item.segProgress?.let { p -> item.segSnap = List(p.length()) { p.get(it) } }
             if (item.total <= 0) item.total = item.done
             item.uri = publish(item, tmp)
             item.finishedAt = System.currentTimeMillis()
@@ -230,10 +237,12 @@ class Downloader(context: Context, private val settings: Settings) {
     private fun multi(item: DownloadItem, url: String, headers: Map<String, String>, tmp: File, total: Long, n: Int, counter: AtomicLong) {
         RandomAccessFile(tmp, "rw").use { it.setLength(total) }
         val seg = total / n
+        item.segSizes = LongArray(n) { i -> if (i == n - 1) total - i * seg else seg }
+        item.segProgress = java.util.concurrent.atomic.AtomicLongArray(n)
         val futures = (0 until n).map { i ->
             val s = i * seg
             val e = if (i == n - 1) total - 1 else s + seg - 1
-            pool.submit { segment(item, url, headers, tmp, s, e, counter) }
+            pool.submit { segment(item, url, headers, tmp, s, e, counter, i) }
         }
         try {
             futures.forEach { it.get() }
@@ -243,7 +252,7 @@ class Downloader(context: Context, private val settings: Settings) {
         }
     }
 
-    private fun segment(item: DownloadItem, url: String, headers: Map<String, String>, tmp: File, start: Long, end: Long, counter: AtomicLong) {
+    private fun segment(item: DownloadItem, url: String, headers: Map<String, String>, tmp: File, start: Long, end: Long, counter: AtomicLong, idx: Int) {
         var pos = start
         var tries = 0
         RandomAccessFile(tmp, "rw").use { raf ->
@@ -265,6 +274,7 @@ class Downloader(context: Context, private val settings: Settings) {
                             raf.write(buf, 0, n)
                             pos += n
                             counter.addAndGet(n.toLong())
+                            item.segProgress?.addAndGet(idx, n.toLong())
                         }
                     }
                 } catch (e: IOException) {
