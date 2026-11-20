@@ -24,11 +24,6 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
-import java.util.concurrent.Future
-import java.util.concurrent.ConcurrentHashMap
-import javax.crypto.Cipher
-import javax.crypto.spec.IvParameterSpec
-import javax.crypto.spec.SecretKeySpec
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
@@ -168,9 +163,6 @@ class Downloader(context: Context, private val settings: Settings) {
         }
         main.post(ticker)
         try {
-            if (item.url.lowercase().let { it.contains(".m3u8") || it.contains("/m3u8") || it.endsWith("#hls") }) {
-                hls(item, headers, tmp, counter)
-            } else {
             var probe = connect(item.url, headers, "bytes=0-0")
             var code = probe.responseCode
             if (code != 200 && code != 206) { // some servers refuse Range requests: try a plain GET
@@ -204,7 +196,6 @@ class Downloader(context: Context, private val settings: Settings) {
                 if (c.responseCode != 200) throw IOException("Server said ${c.responseCode}")
                 c.inputStream.use { copy(item, it, tmp, counter) }
             }
-            }
             if (item.abort) throw IOException("cancelled")
             item.done = counter.get()
             item.segProgress?.let { p -> item.segSnap = List(p.length()) { p.get(it) } }
@@ -226,138 +217,6 @@ class Downloader(context: Context, private val settings: Settings) {
             ACTIVE.decrementAndGet()
             item.speed = 0
             tmp.delete()
-        }
-    }
-
-    // ---- HLS (.m3u8) ----
-
-    private class Seg(val url: String, val keyUrl: String?, val iv: ByteArray?, val seq: Long)
-
-    private fun fetchOnce(url: String, headers: Map<String, String>): ByteArray {
-        var last: Exception? = null
-        repeat(2) {
-            try {
-                val c = connect(url, headers, null)
-                if (c.responseCode != 200) throw IOException("Server said ${c.responseCode}")
-                return c.inputStream.use { it.readBytes() }
-            } catch (e: IOException) { last = e }
-        }
-        throw last ?: IOException("Failed")
-    }
-
-    /** Some CDNs check Referer/Origin strictly, so a 403 is retried with a few header variants. */
-    private fun fetchBytes(url: String, headers: Map<String, String>, what: String = "File"): ByteArray {
-        try {
-            return fetchOnce(url, headers)
-        } catch (e: IOException) {
-            if (e.message?.contains("403") != true) throw IOException("$what: ${e.message}")
-        }
-        val u = Uri.parse(url)
-        val root = "${u.scheme}://${u.authority}"
-        val ref = headers["Referer"]
-        val refRoot = ref?.let { Uri.parse(it) }?.let { "${it.scheme}://${it.authority}" }
-        val variants = listOfNotNull(
-            headers.filterKeys { it != "Origin" },
-            refRoot?.let { headers + mapOf("Referer" to "$it/", "Origin" to it) },
-            headers + mapOf("Referer" to "$root/", "Origin" to root),
-            headers.filterKeys { it != "Origin" && it != "Referer" },
-        )
-        for (v in variants) {
-            try { return fetchOnce(url, v) } catch (_: IOException) {}
-        }
-        throw IOException("$what blocked (403) by ${u.host}")
-    }
-
-    private fun resolve(base: String, ref: String): String = URL(URL(base), ref).toString()
-
-    /** Downloads every segment of an HLS playlist (highest quality, AES-128 supported) and joins them into one file. */
-    private fun hls(item: DownloadItem, headers: Map<String, String>, tmp: File, counter: AtomicLong) {
-        var playlistUrl = item.url
-        var text = String(fetchBytes(playlistUrl, headers, "Playlist"))
-        repeat(2) {
-            if (!text.contains("#EXT-X-STREAM-INF")) return@repeat
-            val lines = text.lines().map { it.trim() }
-            var best = -1L
-            var bestUrl: String? = null
-            for (i in lines.indices) {
-                if (!lines[i].startsWith("#EXT-X-STREAM-INF")) continue
-                val bw = Regex("BANDWIDTH=(\\d+)").find(lines[i])?.groupValues?.get(1)?.toLongOrNull() ?: 0L
-                val u = lines.drop(i + 1).firstOrNull { it.isNotEmpty() && !it.startsWith("#") } ?: continue
-                if (bw > best) { best = bw; bestUrl = u }
-            }
-            playlistUrl = resolve(playlistUrl, bestUrl ?: throw IOException("Empty playlist"))
-            text = String(fetchBytes(playlistUrl, headers, "Playlist"))
-        }
-        if (!text.contains("#EXTINF")) throw IOException("No video in playlist")
-        if (!text.contains("#EXT-X-ENDLIST")) throw IOException("Live stream can't be saved")
-        var seq = Regex("#EXT-X-MEDIA-SEQUENCE:(\\d+)").find(text)?.groupValues?.get(1)?.toLongOrNull() ?: 0L
-        var keyUrl: String? = null
-        var keyIv: ByteArray? = null
-        var mapUrl: String? = null
-        val segs = ArrayList<Seg>()
-        var expectSeg = false
-        for (raw in text.lines()) {
-            val l = raw.trim()
-            when {
-                l.startsWith("#EXT-X-KEY") -> {
-                    val method = Regex("METHOD=([A-Z0-9-]+)").find(l)?.groupValues?.get(1)
-                    when (method) {
-                        "NONE" -> { keyUrl = null; keyIv = null }
-                        "AES-128" -> {
-                            keyUrl = resolve(playlistUrl, Regex("URI=\"([^\"]+)\"").find(l)?.groupValues?.get(1) ?: throw IOException("Bad key"))
-                            keyIv = Regex("IV=0[xX]([0-9a-fA-F]+)").find(l)?.groupValues?.get(1)?.let { hex ->
-                                val h = hex.padStart(32, '0')
-                                ByteArray(16) { h.substring(it * 2, it * 2 + 2).toInt(16).toByte() }
-                            }
-                        }
-                        else -> throw IOException("Protected stream")
-                    }
-                }
-                l.startsWith("#EXT-X-MAP") ->
-                    mapUrl = Regex("URI=\"([^\"]+)\"").find(l)?.groupValues?.get(1)?.let { resolve(playlistUrl, it) }
-                l.startsWith("#EXTINF") -> expectSeg = true
-                l.isNotEmpty() && !l.startsWith("#") && expectSeg -> {
-                    segs.add(Seg(resolve(playlistUrl, l), keyUrl, keyIv, seq))
-                    seq++
-                    expectSeg = false
-                }
-            }
-        }
-        if (segs.isEmpty()) throw IOException("No video in playlist")
-        val keys = ConcurrentHashMap<String, ByteArray>()
-        fun load(s: Seg): ByteArray {
-            var data = fetchBytes(s.url, headers, "Video part")
-            val k = s.keyUrl ?: return data
-            val key = keys.getOrPut(k) { fetchBytes(k, headers, "Key") }
-            val iv = s.iv ?: ByteArray(16).also { b -> var v = s.seq; for (i in 15 downTo 8) { b[i] = (v and 0xff).toByte(); v = v shr 8 } }
-            val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
-            cipher.init(Cipher.DECRYPT_MODE, SecretKeySpec(key, "AES"), IvParameterSpec(iv))
-            data = cipher.doFinal(data)
-            return data
-        }
-        val n = if (settings.boostDownloads) settings.connections.coerceIn(2, 16) else 1
-        item.parts = n
-        item.resumable = false
-        val pool = Executors.newFixedThreadPool(n)
-        try {
-            val queue = java.util.ArrayDeque<Future<ByteArray>>()
-            var next = 0
-            var written = 0
-            FileOutputStream(tmp).use { out ->
-                mapUrl?.let { u -> val d = fetchBytes(u, headers); out.write(d); counter.addAndGet(d.size.toLong()) }
-                while (written < segs.size) {
-                    waitWhilePaused(item)
-                    if (item.abort) throw IOException("cancelled")
-                    while (next < segs.size && queue.size < n * 2) { val s = segs[next++]; queue.add(pool.submit<ByteArray> { load(s) }) }
-                    val data = try { queue.removeFirst().get() } catch (e: ExecutionException) { throw IOException(e.cause?.message ?: "Segment failed") }
-                    out.write(data)
-                    written++
-                    val done = counter.addAndGet(data.size.toLong())
-                    item.total = done * segs.size / written
-                }
-            }
-        } finally {
-            pool.shutdownNow()
         }
     }
 

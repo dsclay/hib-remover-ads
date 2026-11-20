@@ -22,9 +22,6 @@ class WebScripts(context: Context) {
     /** SponsorBlock and remembered playback speed on YouTube. */
     val ytExtras: String = read(context, "scripts/yt-extras.js")
 
-    /** Spots HLS playlists by their content (any frame) so they can be saved. */
-    val sniff: String = read(context, "scripts/sniff.js")
-
     /** Lazy-loads off-screen images and frames. */
     val perf: String = read(context, "scripts/perf.js")
 

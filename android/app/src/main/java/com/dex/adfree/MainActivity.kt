@@ -317,7 +317,6 @@ class MainActivity : ComponentActivity() {
         if (documentStartScripts) {
             if (state.settings.hideAdBoxes) WebViewCompat.addDocumentStartJavaScript(wv, scripts.cosmetic, setOf("*"))
             WebViewCompat.addDocumentStartJavaScript(wv, REDDIT_CSS_JS, REDDIT_ORIGINS)
-            WebViewCompat.addDocumentStartJavaScript(wv, scripts.sniff, setOf("*"))
             WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytMain, YOUTUBE_ORIGINS)
             WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytHush, YOUTUBE_ORIGINS)
             WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytFeed, YOUTUBE_ORIGINS)
@@ -494,20 +493,13 @@ class MainActivity : ComponentActivity() {
                     for (i in 0 until arr.length()) urls.add(arr.getString(i))
                 }
             }
-            state.mediaChoices = urls.take(20).map { MediaChoice(it, if ("#hhref=" in it) Media.fileName(tab.title, "x.m3u8") else Media.fileName(tab.title, it)) }
+            state.mediaChoices = urls.take(20).map { MediaChoice(it, Media.fileName(tab.title, it)) }
         }
     }
 
-    private fun pickMedia(choice0: MediaChoice) {
+    private fun pickMedia(choice: MediaChoice) {
         val tab = state.current ?: return
         state.mediaChoices = null
-        // Playlists spotted by the page script carry the iframe address they were loaded from.
-        val ref = choice0.url.substringAfter("#hhref=", "").takeIf { it.isNotEmpty() }?.let { Uri.decode(it) }
-        val choice = if (ref != null) MediaChoice(choice0.url.substringBefore("#hhref=") + "#hls", choice0.label) else choice0
-        val extra: Map<String, String> = if (ref != null) {
-            val u = Uri.parse(ref)
-            mapOf("Origin" to "${u.scheme}://${u.authority}")
-        } else emptyMap()
         state.pendingDownload = PendingDownload(
             url = choice.url,
             userAgent = tab.webView.settings.userAgentString,
@@ -516,8 +508,8 @@ class MainActivity : ComponentActivity() {
             length = -1,
             tab = tab,
             suggestedName = choice.label,
-            referer = ref ?: tab.url,
-            headers = tab.mediaHeaders[choice.url] ?: extra,
+            referer = tab.url,
+            headers = tab.mediaHeaders[choice.url] ?: emptyMap(),
         )
     }
 
@@ -570,8 +562,7 @@ class MainActivity : ComponentActivity() {
         val REPLAY_HEADERS = setOf("referer", "origin", "user-agent", "accept-language")
         const val FIND_MEDIA_JS =
             "(function(){var o=[];document.querySelectorAll('video,video source,audio,audio source').forEach(function(e){" +
-                "var s=e.currentSrc||e.src;if(s&&/^https?:/.test(s))o.push(s)});" +
-                "(window.__hhM||[]).forEach(function(m){o.push(m.u+'#hhref='+encodeURIComponent(m.r))});return JSON.stringify(o)})()"
+                "var s=e.currentSrc||e.src;if(s&&/^https?:/.test(s))o.push(s)});return JSON.stringify(o)})()"
         private val POPUPS = Regex("popunder|popads|propeller|clickadu|exoclick|juicyads|trafficjunky|adcash|onclick|clickaine|redirect")
         private val ADS = Regex("(^|[.\\-])ads?([.\\-0-9]|$)|adserv|adsystem|doubleclick|adnxs|adform|pagead|banner|syndication|sponsor|promo|taboola|outbrain|criteo|pubmatic|rubicon|openx|smartad|adx|advert|monetiz|bidder|prebid")
         private val TRACKERS = Regex("analytic|metric|stat(s|istic)|telemetry|pixel|beacon|track|segment|mixpanel|amplitude|hotjar|clarity|sentry|crashlytics|collect|(^|[.\\-])logs?[.\\-]|insight")

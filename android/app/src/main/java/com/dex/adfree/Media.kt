@@ -6,9 +6,9 @@ import java.util.Locale
 
 data class MediaChoice(val url: String, val label: String)
 
-/** Spots downloadable media files (and HLS .m3u8 playlists) among a page's requests. YouTube and DRM are not handled. */
+/** Spots downloadable media files among a page's requests. Streaming playlists, YouTube and DRM are not handled. */
 object Media {
-    private val MEDIA_EXT = Regex("\\.(mp4|webm|m4v|mov|mkv|3gp|ogv|mp3|m4a|ogg|wav|flac|m3u8)$")
+    private val MEDIA_EXT = Regex("\\.(mp4|webm|m4v|mov|mkv|3gp|ogv|mp3|m4a|ogg|wav|flac)$")
     private val NOT_MEDIA_EXT = Regex("\\.(js|css|json|wasm|woff2?|ts|m4s|aac|pdf|png|jpe?g|gif|webp|svg|ico|html?)$")
     private val SKIP_HOSTS = listOf("googlevideo.com", "youtube.com", "ytimg.com", "ggpht.com")
 
@@ -18,9 +18,6 @@ object Media {
         val host = url.host?.lowercase(Locale.ROOT) ?: return false
         if (SKIP_HOSTS.any { host == it || host.endsWith(".$it") }) return false
         val path = url.path?.lowercase(Locale.ROOT) ?: return false
-        // Playlists are often served from odd paths, e.g. /hls/m3u8/abc or ?file=x.m3u8.
-        val whole = url.toString().lowercase(Locale.ROOT)
-        if (whole.contains(".m3u8") || path.contains("/m3u8")) return true
         if (MEDIA_EXT.containsMatchIn(path)) return true
         if (NOT_MEDIA_EXT.containsMatchIn(path)) return false
         // Video and audio elements fetch with a Range header, even when the URL has no file extension.
@@ -31,6 +28,6 @@ object Media {
     fun fileName(title: String, url: String): String {
         val ext = MEDIA_EXT.find(Uri.parse(url).path.orEmpty().lowercase(Locale.ROOT))?.groupValues?.get(1) ?: "mp4"
         val base = title.replace(Regex("[^A-Za-z0-9 ._-]"), "").trim().take(60).ifBlank { "video" }
-        return "$base.${if (ext == "m3u8") "ts" else ext}"
+        return "$base.$ext"
     }
 }
