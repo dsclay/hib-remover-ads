@@ -22,6 +22,9 @@ class WebScripts(context: Context) {
     /** SponsorBlock and remembered playback speed on YouTube. */
     val ytExtras: String = read(context, "scripts/yt-extras.js")
 
+    /** Desktop site mode: makes the page see a desktop browser and a wide viewport. */
+    val desktop: String = read(context, "scripts/desktop.js")
+
     /** Lazy-loads off-screen images and frames. */
     val perf: String = read(context, "scripts/perf.js")
 

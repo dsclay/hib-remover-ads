@@ -48,6 +48,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var scripts: WebScripts
     private var customViewCallback: WebChromeClient.CustomViewCallback? = null
     private var documentStartScripts = false
+    private var mobileUa = ""
+    private var desktopUa = ""
     private var privateSupported = false
     private var nextTabId = 0
     private lateinit var downloader: Downloader
@@ -126,6 +128,7 @@ class MainActivity : ComponentActivity() {
                     library = library,
                     onClearData = { clearData() },
                     onFindVideos = { findVideos() },
+                    onToggleDesktop = { toggleDesktop() },
                     onShowBlocked = { showBlocked() },
                     onResetBlocked = { resetBlocked() },
                     onPickMedia = { pickMedia(it) },
@@ -299,6 +302,11 @@ class MainActivity : ComponentActivity() {
                 .replace("; wv", "")
                 .replace(Regex("Version/\\d+\\.\\d+ "), "")
         }
+        if (mobileUa.isEmpty()) {
+            mobileUa = wv.settings.userAgentString
+            desktopUa = mobileUa.replace(Regex("\\(Linux; Android [^)]*\\)"), "(X11; Linux x86_64)").replace(" Mobile Safari", " Safari")
+        }
+        if (tab.desktop) applyDesktop(wv, true)
         // Do not announce this app to websites with an X-Requested-With header (Google refuses sign-in when it sees it).
         if (WebViewFeature.isFeatureSupported(WebViewFeature.REQUESTED_WITH_HEADER_ALLOW_LIST)) {
             WebSettingsCompat.setRequestedWithHeaderOriginAllowList(wv.settings, emptySet())
@@ -316,6 +324,7 @@ class MainActivity : ComponentActivity() {
         // all before the page's own scripts run.
         if (documentStartScripts) {
             if (state.settings.hideAdBoxes) WebViewCompat.addDocumentStartJavaScript(wv, scripts.cosmetic, setOf("*"))
+            WebViewCompat.addDocumentStartJavaScript(wv, scripts.desktop, setOf("*"))
             WebViewCompat.addDocumentStartJavaScript(wv, REDDIT_CSS_JS, REDDIT_ORIGINS)
             WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytMain, YOUTUBE_ORIGINS)
             WebViewCompat.addDocumentStartJavaScript(wv, scripts.ytHush, YOUTUBE_ORIGINS)
@@ -495,6 +504,37 @@ class MainActivity : ComponentActivity() {
             }
             state.mediaChoices = urls.take(20).map { MediaChoice(it, Media.fileName(tab.title, it)) }
         }
+    }
+
+    private fun applyDesktop(wv: WebView, on: Boolean) {
+        wv.settings.apply {
+            userAgentString = if (on) desktopUa else mobileUa
+            useWideViewPort = on
+            loadWithOverviewMode = on
+        }
+    }
+
+    private fun toggleDesktop() {
+        val tab = state.current ?: return
+        tab.desktop = !tab.desktop
+        applyDesktop(tab.webView, tab.desktop)
+        tab.webView.clearCache(true) // the disk cache can hold the other layout
+        val target = if (tab.desktop) desktopUrl(tab.url) else tab.url
+        if (target.isBlank() || Urls.isHome(target)) tab.webView.reload() else tab.webView.loadUrl(target)
+    }
+
+    /** m.example.com / mobile.example.com / en.m.example.com to the desktop address; other URLs are unchanged. */
+    private fun desktopUrl(url: String): String {
+        val uri = Uri.parse(url)
+        val host = uri.host ?: return url
+        val desktop = when {
+            host.startsWith("m.") -> host.removePrefix("m.")
+            host.startsWith("mobile.") -> host.removePrefix("mobile.")
+            host.contains(".m.") -> host.replaceFirst(".m.", ".")
+            else -> return url
+        }
+        val authority = if (uri.port != -1) "$desktop:${uri.port}" else desktop
+        return uri.buildUpon().authority(authority).build().toString()
     }
 
     private fun pickMedia(choice: MediaChoice) {

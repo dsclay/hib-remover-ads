@@ -124,6 +124,7 @@ fun BrowserScreen(
     library: Library,
     onClearData: () -> Unit,
     onFindVideos: () -> Unit,
+    onToggleDesktop: () -> Unit,
     onShowBlocked: () -> Unit,
     onResetBlocked: () -> Unit,
     onPickMedia: (MediaChoice) -> Unit,
@@ -416,6 +417,8 @@ fun BrowserScreen(
                     onSettings = { state.showSettings = true },
                     onShowBlocked = onShowBlocked,
                     onFind = { finding = true },
+                    desktop = tab?.desktop == true,
+                    onToggleDesktop = onToggleDesktop,
                 )
             }
 
